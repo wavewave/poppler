@@ -41,6 +41,8 @@ module Graphics.UI.Gtk.Poppler.Enums (
     FontType(..),
     ViewerPreferences(..),
     Permissions(..),
+    ActionType(..),
+    DestType(..),
     ) where
 
 import Control.Monad
@@ -66,3 +68,5 @@ import System.Glib.UTFString
 {# enum PopplerFontType as FontType {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
 {# enum PopplerViewerPreferences as ViewerPreferences {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
 {# enum PopplerPermissions as Permissions {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
+{# enum PopplerActionType as ActionType {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
+{# enum PopplerDestType as DestType {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
