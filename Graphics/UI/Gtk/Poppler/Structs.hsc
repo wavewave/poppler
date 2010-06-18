@@ -33,6 +33,8 @@
 module Graphics.UI.Gtk.Poppler.Structs (
     PopplerRectangle(..),
     peekPopplerRectangle,                    
+    PopplerColor(..),
+    peekPopplerColor,                
     ) where
     
 import Control.Monad		(liftM)
@@ -72,3 +74,22 @@ peekPopplerRectangle ptr = do
     (y2_ ::#gtk2hs_type gdouble)	<- #{peek PopplerRectangle, y2} ptr
     return (PopplerRectangle (realToFrac x1_) (realToFrac y1_)
                              (realToFrac x2_) (realToFrac y2_))
+      
+data PopplerColor = PopplerColor (#gtk2hs_type guint16) (#gtk2hs_type guint16) (#gtk2hs_type guint16)
+             deriving (Eq,Show)
+      
+instance Storable PopplerColor where
+  sizeOf _ = #{const sizeof(PopplerColor)}
+  alignment _ = alignment (undefined::#gtk2hs_type guint16)
+  peek ptr = peekPopplerColor ptr
+  poke ptr (PopplerColor red green blue) = do
+    #{poke PopplerColor, red}   ptr red
+    #{poke PopplerColor, green} ptr green
+    #{poke PopplerColor, blue}  ptr blue
+     
+peekPopplerColor :: Ptr PopplerColor -> IO PopplerColor
+peekPopplerColor ptr = do
+    red	   <- #{peek PopplerColor, red} ptr
+    green  <- #{peek PopplerColor, green} ptr
+    blue   <- #{peek PopplerColor, blue} ptr
+    return $ PopplerColor red green blue
