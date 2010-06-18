@@ -45,6 +45,7 @@ Library
           Graphics.UI.Gtk.Poppler.Poppler
           Graphics.UI.Gtk.Poppler.Document
           Graphics.UI.Gtk.Poppler.Page
+          Graphics.UI.Gtk.Poppler.FormField
         other-modules:
           Graphics.UI.Gtk.Poppler.Types
           Graphics.UI.Gtk.Poppler.Enums

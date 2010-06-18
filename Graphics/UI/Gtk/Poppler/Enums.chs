@@ -43,6 +43,10 @@ module Graphics.UI.Gtk.Poppler.Enums (
     Permissions(..),
     ActionType(..),
     DestType(..),
+    FormButtonType(..),
+    FormChoiceType(..),
+    FormFieldType(..),
+    FormTextType(..),
     ) where
 
 import Control.Monad
@@ -70,3 +74,7 @@ import System.Glib.UTFString
 {# enum PopplerPermissions as Permissions {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
 {# enum PopplerActionType as ActionType {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
 {# enum PopplerDestType as DestType {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
+{# enum PopplerFormButtonType as FormButtonType {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
+{# enum PopplerFormChoiceType as FormChoiceType {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
+{# enum PopplerFormFieldType as FormFieldType {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
+{# enum PopplerFormTextType as FormTextType {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
