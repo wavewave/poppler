@@ -44,6 +44,7 @@ Library
         exposed-modules:
           Graphics.UI.Gtk.Poppler.Poppler
           Graphics.UI.Gtk.Poppler.Document
+          Graphics.UI.Gtk.Poppler.Attachment
           Graphics.UI.Gtk.Poppler.Page
           Graphics.UI.Gtk.Poppler.FormField
         other-modules:
