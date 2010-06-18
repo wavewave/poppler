@@ -44,6 +44,7 @@ module Graphics.UI.Gtk.Poppler.Document (
     documentGetPageByLabel,
     documentFindDest,
     documentHasAttachments,
+    documentGetAttachments,
     documentGetFormField,
 
     psFileNew,
@@ -55,6 +56,7 @@ import Control.Monad
 import Data.Typeable
 import System.Glib.FFI
 import System.Glib.Flags
+import System.Glib.GList
 import System.Glib.GError
 import System.Glib.GObject
 import System.Glib.UTFString
@@ -204,3 +206,13 @@ psFileSetDuplex psFile duplex =
   {#call poppler_ps_file_set_duplex#}
     (toPSFile psFile)
     (fromBool duplex)
+
+-- | Returns a GList containing PopplerAttachments.
+documentGetAttachments :: DocumentClass doc => doc
+ -> IO [Attachment]
+documentGetAttachments doc = do
+  glistPtr <- {#call poppler_document_get_attachments #} (toDocument doc)
+  list <- fromGList glistPtr
+  attachs <- mapM (makeNewGObject mkAttachment . return) list
+  {#call unsafe g_list_free #} glistPtr
+  return attachs
