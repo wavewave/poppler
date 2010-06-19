@@ -42,11 +42,13 @@ Library
         build-tools:    gtk2hsC2hs, gtk2hsHookGenerator, gtk2hsTypeGen
 						
         exposed-modules:
-          Graphics.UI.Gtk.Poppler.Poppler
-          Graphics.UI.Gtk.Poppler.Document
+          Graphics.UI.Gtk.Poppler.Action
           Graphics.UI.Gtk.Poppler.Attachment
-          Graphics.UI.Gtk.Poppler.Page
+          Graphics.UI.Gtk.Poppler.Document
           Graphics.UI.Gtk.Poppler.FormField
+          Graphics.UI.Gtk.Poppler.Layer
+          Graphics.UI.Gtk.Poppler.Page
+          Graphics.UI.Gtk.Poppler.Poppler
         other-modules:
           Graphics.UI.Gtk.Poppler.Types
           Graphics.UI.Gtk.Poppler.Enums

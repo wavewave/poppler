@@ -24,6 +24,9 @@
 --  available under LGPL Version 2. The documentation included with
 --  this library is based on the original POPPLER documentation.
 --  
+-- TODO :
+--      poppler_font_info_scan
+-- 
 -- | Maintainer  : gtk2hs-devel@lists.sourceforge.net
 --   Stability   : alpha
 --   Portability : portable (depends on GHC)
@@ -47,13 +50,51 @@ module Graphics.UI.Gtk.Poppler.Document (
     documentGetAttachments,
     documentGetFormField,
 
+    indexIterNew,
+    indexIterCopy,
+    indexIterGetChild,
+    indexIterIsOpen,
+    indexIterNext,
+    indexIterGetAction,
+
+    fontInfoNew,
+    fontsIterCopy,
+    fontsIterGetName,
+    fontsIterGetFullName,
+    fontsIterGetFontType,
+    fontsIterIsEmbedded,
+    fontsIterIsSubset,
+    fontsIterNext,
+
     psFileNew,
     psFileSetPaperSize,
     psFileSetDuplex,
+
+-- * Attributes
+    documentAuthor,
+    documentCreationDate,
+    documentCreator,
+    documentFormat,
+    documentFormatMajor,
+    documentFormatMinor,
+    documentKeywords,
+    documentLinearized,
+    documentMetadata,
+    documentModDate,
+    documentPageLayout,
+    documentPageMode,
+    documentPermissions,
+    documentProducer,
+    documentSubject,
+    documentTitle,
+    documentViewerPreferences,
+    documentLabel,
     ) where
 
 import Control.Monad
 import Data.Typeable
+import System.Glib.Attributes
+import System.Glib.Properties
 import System.Glib.FFI
 import System.Glib.Flags
 import System.Glib.GList
@@ -216,3 +257,211 @@ documentGetAttachments doc = do
   attachs <- mapM (makeNewGObject mkAttachment . return) list
   {#call unsafe g_list_free #} glistPtr
   return attachs
+
+-- | Returns the root PopplerIndexIter for document, or 'Nothing'.
+indexIterNew :: DocumentClass doc => doc -> IO (Maybe IndexIter)
+indexIterNew doc =
+  maybeNull (makeNewGObject mkIndexIter) $
+  {#call poppler_index_iter_new #} (toDocument doc)
+
+-- | Creates a new PopplerIndexIter as a copy of iter.
+indexIterCopy :: IndexIterClass iter => iter -> IO IndexIter
+indexIterCopy iter = 
+  makeNewGObject mkIndexIter $
+  {#call poppler_index_iter_copy #} (toIndexIter iter)
+
+-- | Returns a newly created child of parent, or 'Nothing' if the iter has no child. See
+-- 'indexIterNew' for more information on this function.
+indexIterGetChild :: IndexIterClass iter => iter -> IO (Maybe IndexIter)
+indexIterGetChild iter = 
+  maybeNull (makeNewGObject mkIndexIter) $
+  {#call poppler_index_iter_get_child #} (toIndexIter iter)
+
+-- | Returns whether this node should be expanded by default to the user. The document can provide a hint
+-- as to how the document's index should be expanded initially.
+indexIterIsOpen :: IndexIterClass iter => iter
+ -> IO Bool  -- ^ returns 'True', if the document wants iter to be expanded 
+indexIterIsOpen iter =
+  liftM toBool $
+  {#call poppler_index_iter_is_open #} (toIndexIter iter)
+
+-- | Sets iter to point to the next action at the current level, if valid. See 'indexIterNew'
+-- for more information.
+indexIterNext :: IndexIterClass iter => iter
+ -> IO Bool -- ^ returns 'True', if iter was set to the next action 
+indexIterNext iter =
+  liftM toBool $
+  {#call poppler_index_iter_next #} (toIndexIter iter)
+
+-- | Returns the PopplerAction associated with iter. 
+indexIterGetAction :: IndexIterClass iter => iter -> IO Action
+indexIterGetAction iter =
+  makeNewGObject mkAction $
+  {#call poppler_index_iter_get_action #} (toIndexIter iter)
+
+-- |
+fontInfoNew :: DocumentClass doc => doc -> IO FontInfo  
+fontInfoNew doc =
+  makeNewGObject mkFontInfo $
+  {#call poppler_font_info_new#} (toDocument doc)
+
+-- | 
+fontsIterCopy :: FontsIterClass iter => iter -> IO FontsIter
+fontsIterCopy iter =
+  makeNewGObject mkFontsIter $
+  {#call poppler_fonts_iter_copy #} (toFontsIter iter)
+
+-- |
+fontsIterGetName :: FontsIterClass iter => iter -> IO String
+fontsIterGetName iter =
+  {#call poppler_fonts_iter_get_name #} (toFontsIter iter)
+  >>= peekUTFString
+
+-- |
+fontsIterGetFullName :: FontsIterClass iter => iter -> IO String
+fontsIterGetFullName iter =
+  {#call poppler_fonts_iter_get_full_name #} (toFontsIter iter)
+  >>= peekUTFString
+
+-- |
+fontsIterGetFontType :: FontsIterClass iter => iter -> IO FontType
+fontsIterGetFontType iter =
+  liftM (toEnum . fromIntegral) $
+  {#call poppler_fonts_iter_get_font_type #} (toFontsIter iter)
+
+-- |
+fontsIterIsEmbedded :: FontsIterClass iter => iter
+ -> IO Bool
+fontsIterIsEmbedded iter =
+  liftM toBool $
+  {#call poppler_fonts_iter_is_embedded #} (toFontsIter iter)
+
+-- |
+fontsIterIsSubset :: FontsIterClass iter => iter
+ -> IO Bool
+fontsIterIsSubset iter =
+  liftM toBool $
+  {#call poppler_fonts_iter_is_subset #} (toFontsIter iter)
+
+-- | 
+fontsIterNext :: FontsIterClass iter => iter
+ -> IO Bool -- ^ returns 'True', if iter was set to the next action 
+fontsIterNext iter =
+  liftM toBool $
+  {#call poppler_fonts_iter_next #} (toFontsIter iter)
+
+-------------------
+-- Attributes
+-- | The author of the document.
+-- 
+-- Default value: \"\"
+documentAuthor :: DocumentClass doc => ReadAttr doc String 
+documentAuthor = readAttrFromStringProperty "author"
+
+-- | The date and time the document was created.
+-- 
+-- Allowed values: >= 0
+-- 
+-- Default value: 0
+documentCreationDate :: DocumentClass doc => ReadAttr doc Int
+documentCreationDate = readAttrFromIntProperty "creation-date"
+
+-- | The software that created the document.
+-- 
+-- Default value: \"\"
+documentCreator :: DocumentClass doc => ReadAttr doc String
+documentCreator = readAttrFromStringProperty "creator"
+
+-- | The PDF version of the document.
+-- 
+-- Default value: \"\"
+documentFormat :: DocumentClass doc => ReadAttr doc String
+documentFormat = readAttrFromStringProperty "format"
+
+-- | The PDF major version number of the document.
+-- 
+-- Default value: 1
+documentFormatMajor :: DocumentClass doc => ReadAttr doc String
+documentFormatMajor = readAttrFromStringProperty "format-major"
+
+-- | The PDF minor version number of the document.
+-- 
+-- Default value: 0
+documentFormatMinor :: DocumentClass doc => ReadAttr doc String
+documentFormatMinor = readAttrFromStringProperty "format-minor"
+
+-- | Keywords.
+-- 
+-- Default value: \"\"
+documentKeywords :: DocumentClass doc => ReadAttr doc String
+documentKeywords = readAttrFromStringProperty "keywords"
+
+-- | Is the document optimized for web viewing?.
+-- 
+-- Default value: \"\"
+documentLinearized :: DocumentClass doc => ReadAttr doc String
+documentLinearized = readAttrFromStringProperty "linearized"
+
+-- | Embedded XML metadata.
+-- 
+-- Default value: \"\"
+documentMetadata :: DocumentClass doc => ReadAttr doc String
+documentMetadata = readAttrFromStringProperty "metadata"
+
+-- | The date and time the document was modified.
+-- 
+-- Allowed values: >= 0
+-- 
+-- Default value: 0
+documentModDate :: DocumentClass doc => ReadAttr doc Int
+documentModDate = readAttrFromIntProperty "mod-date"
+
+-- | Initial Page Layout.
+-- 
+-- Default value: PopplerPageLayoutUnset
+documentPageLayout :: DocumentClass doc => ReadAttr doc PageLayout
+documentPageLayout = readAttrFromEnumProperty "page-layout"
+                     {#call pure unsafe poppler_page_layout_get_type #}
+
+-- | Page Mode.
+-- 
+-- Default value: PopplerPageModeUnset
+documentPageMode :: DocumentClass doc => ReadAttr doc PageMode
+documentPageMode = readAttrFromEnumProperty "page-mode"
+                   {#call pure unsafe poppler_page_mode_get_type #}
+
+-- | Permissions.
+-- 
+-- Default value: 'PermissionsFull'
+documentPermissions :: DocumentClass doc => ReadAttr doc Permissions
+documentPermissions = readAttrFromEnumProperty "permissions"
+                      {#call pure unsafe poppler_permissions_get_type #}
+
+-- | The software that converted the document.
+-- 
+-- Default value: \"\"
+documentProducer :: DocumentClass doc => ReadAttr doc String
+documentProducer = readAttrFromStringProperty "producer"
+
+-- | Subjects the document touches.
+-- 
+-- Default value: \"\"
+documentSubject :: DocumentClass doc => ReadAttr doc String
+documentSubject = readAttrFromStringProperty "subject"
+
+-- | The title of the document.
+-- 
+-- Default value: \"\"
+documentTitle :: DocumentClass doc => ReadAttr doc String
+documentTitle = readAttrFromStringProperty "title"
+
+-- | Viewer Preferences.
+documentViewerPreferences :: DocumentClass doc => ReadAttr doc ViewerPreferences
+documentViewerPreferences = readAttrFromEnumProperty "viewer-preferences"
+                            {#call pure unsafe poppler_viewer_preferences_get_type #}
+
+-- | The label of the page.
+-- 
+-- Default value: \"\"
+documentLabel :: DocumentClass doc => ReadAttr doc String
+documentLabel = readAttrFromStringProperty "label"

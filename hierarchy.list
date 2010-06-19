@@ -351,6 +351,7 @@
         PopplerLinkMapping as LinkMapping, poppler_link_mapping_get_type if poppler
         PopplerImageMapping as ImageMapping, poppler_image_mapping_get_type if poppler
         PopplerFormFieldMapping as FormFieldMapping, poppler_form_field_mapping_get_type if poppler
-        PopplerFontInfo as PopplerFontInfo, poppler_font_info_get_type if poppler
+        PopplerFontInfo as FontInfo, poppler_font_info_get_type if poppler
         PopplerAttachment as Attachment, poppler_attachment_get_type if poppler
-
+        PopplerAction as Action, poppler_action_get_type if poppler
+        PopplerLayer as Layer, poppler_layer_get_type if poppler
