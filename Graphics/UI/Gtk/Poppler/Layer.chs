@@ -28,6 +28,10 @@
 --   Stability   : alpha
 --   Portability : portable (depends on GHC)
 module Graphics.UI.Gtk.Poppler.Layer (
+-- * Types
+    Layer,
+    LayerClass,
+
 -- * Methods
     layerGetTitle,
     layerIsVisible,

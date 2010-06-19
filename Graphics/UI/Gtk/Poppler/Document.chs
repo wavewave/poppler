@@ -33,10 +33,32 @@
 module Graphics.UI.Gtk.Poppler.Document (
 -- * Details
 --
--- | The PopplerDocument is an object used to refer to a main document.
+-- | The 'Document' is an object used to refer to a main document.
 
 -- * Types
     Document,
+    DocumentClass,
+    Page,
+    PageClass,
+    IndexIter,
+    IndexIterClass,
+    FontsIter,
+    FontsIterClass,
+    FontInfo,
+    FontInfoClass,
+    Dest,
+    DestClass,
+    FormField,
+    Action,
+    PSFile,
+    PSFileClass,
+
+-- * Enums
+    FontType (..),
+    PageLayout (..),
+    PageMode (..),
+    Permissions (..),
+    ViewerPreferences (..),
 
 -- * Methods
     documentNewFromFile,    
@@ -106,12 +128,12 @@ import Graphics.UI.Gtk.Poppler.Enums
 
 {# context lib="poppler" prefix="poppler" #}
 
--- | Creates a new PopplerDocument. If 'Nothing' is returned, then error will be set. Possible errors include
--- those in the PopplerError and GFileError domains.
+-- | Creates a new 'Document'. If 'Nothing' is returned, then error will be set. Possible errors include
+-- those in the 'Error' and GFileError domains.
 documentNewFromFile :: 
     String  -- ^ @uri@      uri of the file to load                   
  -> Maybe String  -- ^ @password@ password to unlock the file with, or 'Nothing' 
- -> IO (Maybe Document) -- ^ returns  A newly created PopplerDocument, or 'Nothing'  
+ -> IO (Maybe Document) -- ^ returns  A newly created 'Document', or 'Nothing'  
 documentNewFromFile uri password = 
   maybeNull (makeNewGObject mkDocument) $
   withUTFString uri $ \ uriPtr -> 
@@ -120,12 +142,12 @@ documentNewFromFile uri password =
                        uriPtr
                        passwordPtr)
 
--- | Creates a new PopplerDocument. If 'Nothing' is returned, then error will be set. Possible errors include
--- those in the PopplerError and GFileError domains.
+-- | Creates a new 'Document'. If 'Nothing' is returned, then error will be set. Possible errors include
+-- those in the 'Error' and GFileError domains.
 documentNewFromData :: 
    String  -- ^ @data@     the pdf data contained in a char array    
  -> Maybe String  -- ^ @password@ password to unlock the file with, or 'Nothing' 
- -> IO (Maybe Document) -- ^ returns  A newly created PopplerDocument, or 'Nothing'  
+ -> IO (Maybe Document) -- ^ returns  A newly created 'Document', or 'Nothing'  
 documentNewFromData dat password = 
   maybeNull (makeNewGObject mkDocument) $
   withUTFString dat $ \ datPtr -> 
@@ -155,23 +177,23 @@ documentGetNPages doc =
   liftM fromIntegral $ 
   {#call poppler_document_get_n_pages #} (toDocument doc)
 
--- | Returns the PopplerPage indexed at index. This object is owned by the caller.
--- | PopplerPages are indexed starting at 0.
+-- | Returns the 'Page' indexed at index. This object is owned by the caller.
+-- | 'Page's are indexed starting at 0.
 documentGetPage :: DocumentClass doc => doc
  -> Int  -- ^ @index@    a page index             
- -> IO Page -- ^ returns  The PopplerPage at index 
+ -> IO Page -- ^ returns  The 'Page' at index 
 documentGetPage doc index = 
   makeNewGObject mkPage $ 
   {#call poppler_document_get_page#} (toDocument doc) (fromIntegral index)
   
--- | Returns the PopplerPage reference by label. This object is owned by the caller. label is a
+-- | Returns the 'Page' reference by label. This object is owned by the caller. label is a
 -- human-readable string representation of the page number, and can be document specific. Typically, it
 -- is a value such as "iii" or "3".
 -- 
 -- By default, "1" refers to the first page.
 documentGetPageByLabel :: DocumentClass doc => doc
  -> String -- ^ @label@    a page label                         
- -> IO Page -- ^ returns  The PopplerPage referenced by label 
+ -> IO Page -- ^ returns  The 'Page' referenced by label 
 documentGetPageByLabel doc label = 
   makeNewGObject mkPage $ 
   withUTFString label $ \ labelPtr -> 
@@ -180,7 +202,7 @@ documentGetPageByLabel doc label =
 -- | Finds named destination @linkName@ in document
 documentFindDest :: DocumentClass doc => doc 
  -> String -- ^ @linkName@ a named destination
- -> IO (Maybe Dest) -- ^ returns   The PopplerDest destination or 'Nothing' if @linkName@ is not a destination. 
+ -> IO (Maybe Dest) -- ^ returns   The 'Dest' destination or 'Nothing' if @linkName@ is not a destination. 
 documentFindDest doc linkName = 
   withUTFString linkName $ \ linkNamePtr -> do
       destPtr <- {#call poppler_document_find_dest #}
@@ -200,9 +222,9 @@ documentHasAttachments doc =
   liftM toBool $
   {#call poppler_document_has_attachments #} (toDocument doc)
 
--- | Returns the PopplerFormField for the given id.
+-- | Returns the 'FormField' for the given id.
 documentGetFormField :: DocumentClass doc => doc
- -> Int  -- ^ @id@       an id of a PopplerFormField                 
+ -> Int  -- ^ @id@       an id of a 'FormField'                 
  -> IO (Maybe FormField)
 documentGetFormField doc id = 
   maybeNull (makeNewGObject mkFormField) $
@@ -228,7 +250,7 @@ psFileNew doc filename firstPage nPages =
 -- | Set the output paper size. These values will end up in the DocumentMedia, the BoundingBox DSC
 -- comments and other places in the generated PostScript.
 psFileSetPaperSize :: PSFileClass file => 
- file  -- ^ @psFile@ a PopplerPSFile which was not yet printed to. 
+ file  -- ^ @psFile@ a 'PSFile' which was not yet printed to. 
  -> Double -- ^ @width@   the paper width in 1/72 inch                  
  -> Double -- ^ @height@  the paper height in 1/72 inch                 
  -> IO () 
@@ -240,7 +262,7 @@ psFileSetPaperSize psFile width height =
 
 -- | Enable or disable Duplex printing.
 psFileSetDuplex :: PSFileClass file => 
-  file -- ^ @psFile@ a PopplerPSFile which was not yet printed to                     
+  file -- ^ @psFile@ a 'PSFile' which was not yet printed to                     
  -> Bool  -- ^ @duplex@  whether to force duplex printing (on printers which support this)
  -> IO ()
 psFileSetDuplex psFile duplex =
@@ -248,7 +270,7 @@ psFileSetDuplex psFile duplex =
     (toPSFile psFile)
     (fromBool duplex)
 
--- | Returns a GList containing PopplerAttachments.
+-- | Returns a GList containing 'Attachment's.
 documentGetAttachments :: DocumentClass doc => doc
  -> IO [Attachment]
 documentGetAttachments doc = do
@@ -258,13 +280,13 @@ documentGetAttachments doc = do
   {#call unsafe g_list_free #} glistPtr
   return attachs
 
--- | Returns the root PopplerIndexIter for document, or 'Nothing'.
+-- | Returns the root 'IndexIter' for document, or 'Nothing'.
 indexIterNew :: DocumentClass doc => doc -> IO (Maybe IndexIter)
 indexIterNew doc =
   maybeNull (makeNewGObject mkIndexIter) $
   {#call poppler_index_iter_new #} (toDocument doc)
 
--- | Creates a new PopplerIndexIter as a copy of iter.
+-- | Creates a new 'IndexIter' as a copy of iter.
 indexIterCopy :: IndexIterClass iter => iter -> IO IndexIter
 indexIterCopy iter = 
   makeNewGObject mkIndexIter $
@@ -293,7 +315,7 @@ indexIterNext iter =
   liftM toBool $
   {#call poppler_index_iter_next #} (toIndexIter iter)
 
--- | Returns the PopplerAction associated with iter. 
+-- | Returns the 'Action' associated with iter. 
 indexIterGetAction :: IndexIterClass iter => iter -> IO Action
 indexIterGetAction iter =
   makeNewGObject mkAction $
@@ -418,14 +440,14 @@ documentModDate = readAttrFromIntProperty "mod-date"
 
 -- | Initial Page Layout.
 -- 
--- Default value: PopplerPageLayoutUnset
+-- Default value: 'PageLayoutUnset'
 documentPageLayout :: DocumentClass doc => ReadAttr doc PageLayout
 documentPageLayout = readAttrFromEnumProperty "page-layout"
                      {#call pure unsafe poppler_page_layout_get_type #}
 
 -- | Page Mode.
 -- 
--- Default value: PopplerPageModeUnset
+-- Default value: 'PageModeUnset'
 documentPageMode :: DocumentClass doc => ReadAttr doc PageMode
 documentPageMode = readAttrFromEnumProperty "page-mode"
                    {#call pure unsafe poppler_page_mode_get_type #}

@@ -28,6 +28,12 @@
 --   Stability   : alpha
 --   Portability : portable (depends on GHC)
 module Graphics.UI.Gtk.Poppler.Action (
+-- * Types,
+    Action,
+    ActionClass,
+    Dest,
+    DestClass,
+
 -- * Methods
     actionCopy,
     destCopy,
@@ -46,13 +52,13 @@ import Graphics.UI.Gtk.Poppler.Enums
 
 {# context lib="poppler" prefix="poppler" #}
 
--- | Copies action, creating an identical PopplerAction.
+-- | Copies action, creating an identical 'Action'.
 actionCopy :: ActionClass action => action -> IO Action
 actionCopy action =
   makeNewGObject mkAction $
   {#call poppler_action_copy #} (toAction action)
 
--- | Copies dest, creating an identical PopplerDest.
+-- | Copies dest, creating an identical 'Dest'.
 destCopy :: DestClass dest => dest -> IO Dest
 destCopy dest =
   makeNewGObject mkDest $

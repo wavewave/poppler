@@ -28,6 +28,16 @@
 --   Stability   : alpha
 --   Portability : portable (depends on GHC)
 module Graphics.UI.Gtk.Poppler.FormField (
+-- * Types
+    FormField,
+    FormFieldClass,
+
+-- * Enums
+    FormFieldType (..),
+    FormButtonType (..),
+    FormChoiceType (..),
+    FormTextType (..),
+
 -- * Methods
     formFieldGetId,
     formFieldGetFieldType,
@@ -85,7 +95,7 @@ formFieldGetId field =
 
 -- | Gets the type of field
 formFieldGetFieldType :: FormFieldClass field => field 
- -> IO FormFieldType -- ^ returns PopplerFormFieldType of field 
+ -> IO FormFieldType -- ^ returns 'FormFieldType' of field 
 formFieldGetFieldType field =
   liftM (toEnum . fromIntegral) $
   {# call poppler_form_field_get_field_type #} (toFormField field)
@@ -106,12 +116,12 @@ formFieldGetFontSize field =
 
 -- | Gets the button type of field
 formFieldButtonGetButtonType :: FormFieldClass field => field 
- -> IO FormButtonType -- ^ returns PopplerFormButtonType of field 
+ -> IO FormButtonType -- ^ returns 'FormButtonType' of field 
 formFieldButtonGetButtonType field =
   liftM (toEnum . fromIntegral) $
   {# call poppler_form_field_button_get_button_type #} (toFormField field)
 
--- | Queries a PopplerFormField and returns its current state. Returns 'True' if field is pressed in and
+-- | Queries a 'FormField' and returns its current state. Returns 'True' if field is pressed in and
 -- 'False' if it is raised.
 formFieldButtonGetState :: FormFieldClass field => field
  -> IO Bool -- ^ returns current state of field 
@@ -119,7 +129,7 @@ formFieldButtonGetState field =
   liftM toBool $
   {#call poppler_form_field_button_get_state #} (toFormField field)
 
--- | Sets the status of field. Set to 'True' if you want the PopplerFormField to be 'pressed in', and 'False'
+-- | Sets the status of field. Set to 'True' if you want the 'FormField' to be 'pressed in', and 'False'
 -- to raise it.
 formFieldButtonSetState :: FormFieldClass field => field
  -> Bool 
@@ -150,7 +160,7 @@ formFieldChoiceDoSpellCheck field =
 
 -- | Gets the choice type of field
 formFieldChoiceGetChoiceType :: FormFieldClass field => field
- -> IO FormChoiceType -- ^ returns PopplerFormChoiceType of field 
+ -> IO FormChoiceType -- ^ returns 'FormChoiceType' of field 
 formFieldChoiceGetChoiceType field =
   liftM (toEnum . fromIntegral) $
   {#call poppler_form_field_choice_get_choice_type #} (toFormField field)
@@ -246,7 +256,7 @@ formFieldTextGetText field =
 
 -- | Gets the text type of field
 formFieldTextGetTextType :: FormFieldClass field => field 
- -> IO FormTextType -- ^ returns PopplerFormTextType of field 
+ -> IO FormTextType -- ^ returns 'FormTextType' of field 
 formFieldTextGetTextType field =
   liftM (toEnum . fromIntegral) $
   {# call poppler_form_field_text_get_text_type #} (toFormField field)

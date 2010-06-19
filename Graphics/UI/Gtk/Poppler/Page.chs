@@ -28,6 +28,22 @@
 --   Stability   : alpha
 --   Portability : portable (depends on GHC)
 module Graphics.UI.Gtk.Poppler.Page (
+-- * Types
+    Cairo,
+    PopplerRectangle (..),
+    PopplerColor (..),
+    ImageMapping,
+    ImageMappingClass,
+    PageTransition,
+    PageTransitionClass,
+    LinkMapping,
+    LinkMappingClass,
+    FormFieldMapping,
+    FormFieldMappingClass,
+
+-- * Enums
+    SelectionStyle (..),
+
 -- * Methods
     pageRender,
     pageRenderToPixbuf,
@@ -178,12 +194,12 @@ pageGetDuration page =
 
 -- | Returns the transition effect of page
 pageGetTransition :: PageClass page => page
- -> IO (Maybe PageTransition) -- ^ returns a PopplerPageTransition or 'Nothing'. 
+ -> IO (Maybe PageTransition) -- ^ returns a 'PageTransition' or 'Nothing'. 
 pageGetTransition page =
   maybeNull (makeNewGObject mkPageTransition) $ 
   {#call poppler_page_get_transition #} (toPage page)
 
--- | Returns a list of PopplerLinkMapping items that map from a location on page to a PopplerAction. 
+-- | Returns a list of 'LinkMapping' items that map from a location on page to a 'Action'. 
 pageGetLinkMapping :: PageClass page => page
  -> IO [LinkMapping]
 pageGetLinkMapping page = do
@@ -193,7 +209,7 @@ pageGetLinkMapping page = do
   {#call unsafe poppler_page_free_link_mapping #} (castPtr glistPtr)
   return mappings
 
--- | Returns a list of PopplerImageMapping items that map from a location on page to a PopplerAction. 
+-- | Returns a list of 'ImageMapping' items that map from a location on page to a 'Action'. 
 pageGetImageMapping :: PageClass page => page
  -> IO [ImageMapping]
 pageGetImageMapping page = do
@@ -203,7 +219,7 @@ pageGetImageMapping page = do
   {#call unsafe poppler_page_free_image_mapping #} (castPtr glistPtr)
   return mappings
 
--- | Returns a list of PopplerFormFieldMapping items that map from a location on page to a PopplerAction. 
+-- | Returns a list of 'FormFieldMapping' items that map from a location on page to a 'Action'. 
 pageGetFormFieldMapping :: PageClass page => page
  -> IO [FormFieldMapping]
 pageGetFormFieldMapping page = do
@@ -217,7 +233,7 @@ pageGetFormFieldMapping page = do
 -- 'pageRenderSelectionToPixbuf' as a GList of PopplerRectangle.
 pageGetSelectionRegion :: PageClass page => page
  -> Double -- ^ @scale@     scale specified as pixels per point             
- -> SelectionStyle -- ^ @style@     a PopplerSelectionStyle                         
+ -> SelectionStyle -- ^ @style@     a 'SelectionStyle'                         
  -> PopplerRectangle -- ^ @selection@ start and end point of selection as a rectangle 
  -> IO [PopplerRectangle]
 pageGetSelectionRegion page scale style selection = 
@@ -241,7 +257,7 @@ pageRenderSelection :: PageClass page => page
  -> Cairo -- ^ @cairo@            cairo context to render to                      
  -> PopplerRectangle -- ^ @selection@        start and end point of selection as a rectangle 
  -> PopplerRectangle -- ^ @oldSelection@    previous selection                              
- -> SelectionStyle -- ^ @style@            a PopplerSelectionStyle                         
+ -> SelectionStyle -- ^ @style@            a 'SelectionStyle'                         
  -> PopplerColor -- ^ @glyphColor@      color to use for drawing glyphs                 
  -> PopplerColor -- ^ @backgroundColor@ color to use for the selection background       
  -> IO ()
@@ -270,7 +286,7 @@ pageRenderSelectionToPixbuf :: PageClass page => page
  -> Pixbuf -- ^ @pixbuf@           pixbuf to render to                             
  -> PopplerRectangle -- ^ @selection@        start and end point of selection as a rectangle 
  -> PopplerRectangle -- ^ @oldSelection@    previous selection                              
- -> SelectionStyle -- ^ @style@            a PopplerSelectionStyle                         
+ -> SelectionStyle -- ^ @style@            a 'SelectionStyle'                         
  -> Color -- ^ @glyphColor@      color to use for drawing glyphs                 
  -> Color -- ^ @backgroundColor@ color to use for the selection background       
  -> IO ()

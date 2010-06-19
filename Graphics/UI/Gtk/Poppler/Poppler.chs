@@ -28,6 +28,9 @@
 --   Stability   : alpha
 --   Portability : portable (depends on GHC)
 module Graphics.UI.Gtk.Poppler.Poppler (
+-- * Types
+    Backend(..),
+
 -- * Methods
     getBackend,
     getVersion,

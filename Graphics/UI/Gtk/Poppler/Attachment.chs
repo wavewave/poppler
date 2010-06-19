@@ -30,6 +30,8 @@
 module Graphics.UI.Gtk.Poppler.Attachment (
 -- * Types
     AttachmentSave,
+    Attachment,
+    AttachmentClass,
 
 -- * Methods
     attachmentSave,
