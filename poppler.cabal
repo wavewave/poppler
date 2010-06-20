@@ -17,7 +17,6 @@ Description:    Poppler is a fork of the xpdf PDF viewer, to provide PDF renderi
 Category:       Graphics
 Tested-With:    GHC == 6.12.3
 Extra-Source-Files: Gtk2HsSetup.hs
-                    marshal.list
 					hierarchy.list
 					template-hsc-gtk2hs.h
 
@@ -30,7 +29,7 @@ x-Types-Tag:       poppler
 x-Types-Hierarchy: hierarchy.list
 
 Data-Dir:		demo
-Data-Files:		Pdfviewer.hs
+Data-Files:		PdfViewer.hs
                 Makefile
 
 Source-Repository head
@@ -38,7 +37,7 @@ Source-Repository head
   location:     http://patch-tag.com/r/AndyStewart/poppler
 
 Library
-        build-depends:  base >= 4, array, containers, haskell98, mtl, bytestring,
+        build-depends:  base >= 4 && < 5, array, containers, haskell98, mtl, bytestring,
                         glib >= 0.11 && < 0.12,
                         cairo >= 0.11 && < 0.12,
                         gtk >= 0.11 && < 0.12
