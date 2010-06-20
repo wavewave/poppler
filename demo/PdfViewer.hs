@@ -12,19 +12,20 @@ module Main where
 
 import Control.Applicative
 import Control.Concurrent.STM
-import Data.Maybe
 import Control.Monad
-import Graphics.UI.Gtk
+import Data.Maybe
 import Graphics.Rendering.Cairo
+import Graphics.UI.Gtk
+import Graphics.UI.Gtk.Gdk.EventM
 import Graphics.UI.Gtk.Poppler.Document
 import Graphics.UI.Gtk.Poppler.Page
-import Graphics.UI.Gtk.Gdk.EventM
-import System.Process
 import System.Environment 
+import System.Process
 
 data Viewer =
     Viewer {viewerArea          :: DrawingArea
            ,viewerDocument      :: Document
+           ,viewerScrolledWindow:: ScrolledWindow
            ,viewerPage          :: TVar Int}
 
 -- | Main entry.
@@ -49,42 +50,89 @@ viewerMain file = do
   
   -- Create window.
   window <- windowNew
-  windowSetDefaultSize window 900 600
+  windowSetDefaultSize window 600 780
   windowSetPosition window WinPosCenter
 
-  scrolledWindow <- scrolledWindowNew Nothing Nothing
-  scrolledWindowSetPolicy scrolledWindow PolicyAutomatic PolicyAutomatic
-  
-  putStrLn "Debug before"
-  viewer <- viewerNew file
-  putStrLn "Debug before"
+  -- Create window box.
+  windowBox <- vBoxNew False 0
+  window `containerAdd` windowBox
 
+  -- Create viewer.
+  viewer <- viewerNew file
   let area = viewerArea viewer
       doc  = viewerDocument viewer
-  scrolledWindowAddWithViewport scrolledWindow area
+      sWin = viewerScrolledWindow viewer
 
-  area `on` exposeEvent $ tryEvent $ do
-      page <- liftIO $ documentGetPage doc 0
-      (width, height) <- liftIO $ pageGetSize page
-      liftIO $ widgetSetSizeRequest area (truncate width) (truncate height)
-             
-      frameWin <- liftIO $ widgetGetDrawWindow area
-      liftIO $ renderWithDrawable frameWin $ do 
-        setSourceRGB 1.0 1.0 1.0
-        rectangle 0.0 0.0 width height
-        fill
-        pageRender page
-  
-  window `containerAdd` scrolledWindow
+  -- Set title.
+  title <- get doc documentTitle 
+  windowSetTitle window ("PdfViewer " ++ title)
 
-  -- Show window.
+  -- Create spin button to select page.
+  pages <- documentGetNPages doc -- get maximum page
+  spinButton <- spinButtonNewWithRange 0 (integralToDouble pages) 1.0
+
+  -- Redraw viewer after change value of spin button.
+  afterValueSpinned spinButton $ do
+    page <- spinButtonGetValue spinButton
+    writeTVarIO (viewerPage viewer) (truncate page)
+    widgetQueueDraw area
+
+  -- Show.
+  boxPackStart windowBox sWin PackGrow 0
+  boxPackStart windowBox spinButton PackNatural 0
   window `onDestroy` mainQuit
   widgetShowAll window
 
   mainGUI
 
 viewerNew :: FilePath -> IO Viewer
-viewerNew file = 
-  Viewer <$> drawingAreaNew
-         <*> liftM (fromMaybe (error "Error when open pdf file.")) (documentNewFromFile ("file://" ++ file) Nothing)
-         <*> newTVarIO 0
+viewerNew file = do
+  area <- drawingAreaNew
+  doc  <- liftM (fromMaybe (error "Error when open pdf file.")) (documentNewFromFile ("file://" ++ file) Nothing)
+  sWin <- scrolledWindowNew Nothing Nothing
+  page <- newTVarIO 0
+
+  let viewer = Viewer area doc sWin page
+
+  scrolledWindowAddWithViewport sWin area
+  scrolledWindowSetPolicy sWin PolicyAutomatic PolicyAutomatic
+
+  area `on` exposeEvent $ tryEvent $ viewerDraw viewer                    
+
+  return viewer
+
+viewerDraw :: Viewer -> EventM EExpose ()
+viewerDraw viewer = do
+  let doc = viewerDocument viewer
+      area = viewerArea viewer
+  (winWidth, winHeight) <- eventWindowSize                    
+  liftIO $ do
+    pageNumber <- readTVarIO $ viewerPage viewer
+    page       <- documentGetPage doc pageNumber
+    frameWin   <- widgetGetDrawWindow area
+    (docWidth, docHeight) <- pageGetSize page
+    widgetSetSizeRequest area (truncate docWidth) (truncate docHeight)
+
+    renderWithDrawable frameWin $ do 
+      setSourceRGB 1.0 1.0 1.0
+      rectangle 0.0 0.0 winWidth winHeight
+      fill
+      let scaleX = winWidth / docWidth 
+      scale scaleX scaleX
+      pageRender page
+
+eventWindowSize :: EventM EExpose (Double, Double)      
+eventWindowSize = do
+    dr    <- eventWindow
+    (w,h) <- liftIO $ drawableGetSize dr
+    return $ if w * h > 1
+               then (fromIntegral w, fromIntegral h)
+               else (1,1)
+
+-- | Transform Int to Doube
+integralToDouble :: Integral a => a -> Double
+integralToDouble v = fromIntegral v :: Double
+
+-- | The IO version of `writeTVar`.
+writeTVarIO :: TVar a -> a -> IO ()
+writeTVarIO a b = atomically $ writeTVar a b

@@ -29,6 +29,10 @@ x-Types-Prefix:    poppler
 x-Types-Tag:       poppler
 x-Types-Hierarchy: hierarchy.list
 
+Data-Dir:		demo
+Data-Files:		Pdfviewer.hs
+                Makefile
+
 Source-Repository head
   type:         darcs
   location:     http://patch-tag.com/r/AndyStewart/poppler
