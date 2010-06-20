@@ -78,6 +78,9 @@ import Graphics.UI.Gtk.Abstract.Widget (Rectangle (..), Color (..))
 {#import Graphics.Rendering.Cairo.Types#}
 {#import Graphics.UI.Gtk.Poppler.Types#}
 import Graphics.UI.Gtk.Poppler.Structs
+import Control.Monad.Reader (ReaderT(runReaderT), ask, MonadIO, liftIO)
+
+import Graphics.Rendering.Cairo.Internal (Render(..), bracketR)
 
 {# context lib="poppler" prefix="poppler" #}
 
@@ -85,10 +88,10 @@ import Graphics.UI.Gtk.Poppler.Structs
 -- displayed. If you want to render a page that will be printed use 'pageRenderForPrinting'
 -- instead
 pageRender :: PageClass page => page
- -> Cairo  -- ^ @cairo@ cairo context to render to 
- -> IO ()
-pageRender page cairo = 
-  {#call poppler_page_render #} (toPage page) cairo
+ -> Render ()
+pageRender page = do
+  cairo <- ask
+  liftIO $ {#call poppler_page_render #} (toPage page) cairo
 
 -- | First scale the document to match the specified pixels per point, then render the rectangle given by
 -- the upper left corner at (@srcX@, @srcY@) and @srcWidth@ and @srcHeight@. This function is for rendering
@@ -254,26 +257,27 @@ pageGetSelectionRegion page scale style selection =
 -- If non-'Nothing', @oldSelection@ specifies the selection that is already rendered to cairo, in which case
 -- this function will (some day) only render the changed part of the selection.
 pageRenderSelection :: PageClass page => page 
- -> Cairo -- ^ @cairo@            cairo context to render to                      
  -> PopplerRectangle -- ^ @selection@        start and end point of selection as a rectangle 
  -> PopplerRectangle -- ^ @oldSelection@    previous selection                              
  -> SelectionStyle -- ^ @style@            a 'SelectionStyle'                         
  -> PopplerColor -- ^ @glyphColor@      color to use for drawing glyphs                 
  -> PopplerColor -- ^ @backgroundColor@ color to use for the selection background       
- -> IO ()
-pageRenderSelection page cairo selection oldSelection style glyphColor backgroundColor = 
-  with selection $ \ selectionPtr -> 
-  with oldSelection $ \ oldSelectionPtr -> 
-  with glyphColor $ \ glyphColorPtr -> 
-  with backgroundColor $ \ backgroundColorPtr -> 
-      {#call poppler_page_render_selection #}
-        (toPage page)
-        cairo
-        (castPtr selectionPtr)
-        (castPtr oldSelectionPtr)
-        ((fromIntegral . fromEnum) style)
-        (castPtr glyphColorPtr)
-        (castPtr backgroundColorPtr)
+ -> Render ()
+pageRenderSelection page selection oldSelection style glyphColor backgroundColor = do
+  cairo <- ask
+  liftIO $ 
+         with selection $ \ selectionPtr -> 
+         with oldSelection $ \ oldSelectionPtr -> 
+         with glyphColor $ \ glyphColorPtr -> 
+         with backgroundColor $ \ backgroundColorPtr -> 
+              {#call poppler_page_render_selection #}
+                  (toPage page)
+                  cairo
+                  (castPtr selectionPtr)
+                  (castPtr oldSelectionPtr)
+                  ((fromIntegral . fromEnum) style)
+                  (castPtr glyphColorPtr)
+                  (castPtr backgroundColorPtr)
         
 -- | Render the selection specified by selection for page into pixbuf. The selection will be rendered at
 -- scale, using @glyphColor@ for the glyphs and @backgroundColor@ for the selection background.

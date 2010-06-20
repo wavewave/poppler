@@ -17,12 +17,13 @@ import Control.Monad
 import Graphics.UI.Gtk
 import Graphics.Rendering.Cairo
 import Graphics.UI.Gtk.Poppler.Document
+import Graphics.UI.Gtk.Poppler.Page
+import Graphics.UI.Gtk.Gdk.EventM
 import System.Process
 import System.Environment 
 
 data Viewer =
     Viewer {viewerArea          :: DrawingArea
-           ,viewerSurface       :: Surface
            ,viewerDocument      :: Document
            ,viewerPage          :: TVar Int}
 
@@ -54,12 +55,25 @@ viewerMain file = do
   scrolledWindow <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scrolledWindow PolicyAutomatic PolicyAutomatic
   
+  putStrLn "Debug before"
   viewer <- viewerNew file
+  putStrLn "Debug before"
+
   let area = viewerArea viewer
+      doc  = viewerDocument viewer
   scrolledWindowAddWithViewport scrolledWindow area
 
-  -- area `on` exposeEvent $ tryEvent $ do
-                    
+  area `on` exposeEvent $ tryEvent $ do
+      page <- liftIO $ documentGetPage doc 0
+      (width, height) <- liftIO $ pageGetSize page
+      liftIO $ widgetSetSizeRequest area (truncate width) (truncate height)
+             
+      frameWin <- liftIO $ widgetGetDrawWindow area
+      liftIO $ renderWithDrawable frameWin $ do 
+        setSourceRGB 1.0 1.0 1.0
+        rectangle 0.0 0.0 width height
+        fill
+        pageRender page
   
   window `containerAdd` scrolledWindow
 
@@ -72,7 +86,5 @@ viewerMain file = do
 viewerNew :: FilePath -> IO Viewer
 viewerNew file = 
   Viewer <$> drawingAreaNew
-         <*> createImageSurface FormatRGB24 0 0
-         <*> liftM (fromMaybe (error "Error when open pdf file.")) (documentNewFromFile file Nothing)
+         <*> liftM (fromMaybe (error "Error when open pdf file.")) (documentNewFromFile ("file://" ++ file) Nothing)
          <*> newTVarIO 0
-
