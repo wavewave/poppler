@@ -1,5 +1,5 @@
 Name:           poppler
-Version:        0.11.0
+Version:        0.11.1
 License:        GPL-2
 License-file:   COPYING
 Copyright:      (c) 2001-2010 The Gtk2Hs Team
@@ -61,4 +61,4 @@ Library
 		
         include-dirs:   .
         x-c2hs-Header:  glib/poppler.h
-        pkgconfig-depends: poppler-glib >= 0.14.0, gobject-2.0, glib-2.0, cairo >= 1.2.0, gdk-2.0, gdk-pixbuf-2.0, pango
+        pkgconfig-depends: poppler-glib >= 0.12.4, gobject-2.0, glib-2.0, cairo >= 1.2.0, gdk-2.0, gdk-pixbuf-2.0, pango
