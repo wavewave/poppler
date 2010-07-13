@@ -111,13 +111,13 @@ viewerDraw viewer = do
     page       <- documentGetPage doc pageNumber
     frameWin   <- widgetGetDrawWindow area
     (docWidth, docHeight) <- pageGetSize page
-    widgetSetSizeRequest area (truncate docWidth) (truncate docHeight)
+    let scaleX = winWidth / docWidth
+        width  = winWidth
+        height = scaleX * docHeight
+    widgetSetSizeRequest area (truncate width) (truncate height)
 
     renderWithDrawable frameWin $ do 
       setSourceRGB 1.0 1.0 1.0
-      rectangle 0.0 0.0 winWidth winHeight
-      fill
-      let scaleX = winWidth / docWidth 
       scale scaleX scaleX
       pageRender page
 
