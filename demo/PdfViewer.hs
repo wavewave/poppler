@@ -19,7 +19,7 @@ import Graphics.UI.Gtk
 import Graphics.UI.Gtk.Gdk.EventM
 import Graphics.UI.Gtk.Poppler.Document
 import Graphics.UI.Gtk.Poppler.Page
-import System.Environment 
+import System.Environment
 import System.Process
 
 data Viewer =
@@ -35,8 +35,8 @@ main = do
   args <- getArgs
   case args of
     -- Display help
-    ["--help"] -> 
-       putStrLn $ "PDF viewer demo. \n\n" ++ 
+    ["--help"] ->
+       putStrLn $ "PDF viewer demo. \n\n" ++
                   "Usage: pdfviewer file\n\n"
     -- Start program.
     [arg]    -> viewerMain arg
@@ -47,7 +47,7 @@ viewerMain :: FilePath -> IO ()
 viewerMain file = do
   -- Init.
   initGUI
-  
+
   -- Create window.
   window <- windowNew
   windowSetDefaultSize window 600 780
@@ -64,7 +64,7 @@ viewerMain file = do
       sWin = viewerScrolledWindow viewer
 
   -- Set title.
-  title <- get doc documentTitle 
+  title <- get doc documentTitle
   windowSetTitle window ("PdfViewer " ++ title)
 
   -- Create spin button to select page.
@@ -97,7 +97,7 @@ viewerNew file = do
   scrolledWindowAddWithViewport sWin area
   scrolledWindowSetPolicy sWin PolicyAutomatic PolicyAutomatic
 
-  area `on` exposeEvent $ tryEvent $ viewerDraw viewer                    
+  area `on` exposeEvent $ tryEvent $ viewerDraw viewer
 
   return viewer
 
@@ -105,7 +105,7 @@ viewerDraw :: Viewer -> EventM EExpose ()
 viewerDraw viewer = do
   let doc = viewerDocument viewer
       area = viewerArea viewer
-  (winWidth, winHeight) <- eventWindowSize                    
+  (winWidth, winHeight) <- eventWindowSize
   liftIO $ do
     pageNumber <- readTVarIO $ viewerPage viewer
     page       <- documentGetPage doc pageNumber
@@ -116,12 +116,12 @@ viewerDraw viewer = do
         height = scaleX * docHeight
     widgetSetSizeRequest area (truncate width) (truncate height)
 
-    renderWithDrawable frameWin $ do 
+    renderWithDrawable frameWin $ do
       setSourceRGB 1.0 1.0 1.0
       scale scaleX scaleX
       pageRender page
 
-eventWindowSize :: EventM EExpose (Double, Double)      
+eventWindowSize :: EventM EExpose (Double, Double)
 eventWindowSize = do
     dr    <- eventWindow
     (w,h) <- liftIO $ drawableGetSize dr
