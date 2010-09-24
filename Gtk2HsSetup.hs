@@ -32,11 +32,19 @@
 
 -- | Build a Gtk2hs package.
 --
-module Gtk2HsSetup ( gtk2hsUserHooks, getPkgConfigPackages ) where
+module Gtk2HsSetup ( 
+  gtk2hsUserHooks, 
+  getPkgConfigPackages, 
+  checkGtk2hsBuildtools
+  ) where
 
 import Distribution.Simple
 import Distribution.Simple.PreProcess
-import Distribution.InstalledPackageInfo ( importDirs )
+import Distribution.InstalledPackageInfo ( importDirs,
+                                           showInstalledPackageInfo,
+                                           libraryDirs,
+                                           extraLibraries,
+                                           extraGHCiLibraries )
 import Distribution.Simple.PackageIndex (
 #if CABAL_VERSION_CHECK(1,8,0)
   lookupInstalledPackageId
@@ -49,7 +57,7 @@ import Distribution.PackageDescription as PD ( PackageDescription(..),
                                                BuildInfo(..),
                                                emptyBuildInfo, allBuildInfo,
                                                Library(..),
-                                               libModules)
+                                               libModules, hasLibs)
 import Distribution.Simple.LocalBuildInfo (LocalBuildInfo(..),
                                            InstallDirs(..),
 #if CABAL_VERSION_CHECK(1,8,0)
@@ -61,27 +69,36 @@ import Distribution.Simple.LocalBuildInfo (LocalBuildInfo(..),
 import Distribution.Simple.Compiler  ( Compiler(..) )
 import Distribution.Simple.Program (
   Program(..), ConfiguredProgram(..),
-  rawSystemProgramConf, rawSystemProgramStdoutConf,
-  c2hsProgram, pkgConfigProgram,
+  rawSystemProgramConf, rawSystemProgramStdoutConf, programName,
+  c2hsProgram, pkgConfigProgram, requireProgram, ghcPkgProgram,
   simpleProgram, lookupProgram, rawSystemProgramStdout, ProgArg)
 import Distribution.ModuleName ( ModuleName, components, toFilePath )
 import Distribution.Simple.Utils
 import Distribution.Simple.Setup (CopyFlags(..), InstallFlags(..), CopyDest(..),
                                   defaultCopyFlags, ConfigFlags(configVerbosity),
-                                  fromFlag, toFlag)
+                                  fromFlag, toFlag, RegisterFlags(..), flagToMaybe,
+                                  fromFlagOrDefault, defaultRegisterFlags)
 import Distribution.Simple.BuildPaths ( autogenModulesDir )
+import Distribution.Simple.Install ( install )
+#if CABAL_VERSION_CHECK(1,8,0)
+import Distribution.Simple.Register ( generateRegistrationInfo, registerPackage )
+#else
+import qualified Distribution.Simple.Register as Register ( register )
+#endif
 import Distribution.Text ( simpleParse, display )
 import System.FilePath
-import System.Directory ( doesFileExist )
+import System.Exit (exitFailure)
+import System.Directory ( doesFileExist, getDirectoryContents, doesDirectoryExist )
 import Distribution.Version (Version(..))
 import Distribution.Verbosity
-import Control.Monad (unless)
-import Data.Maybe (fromMaybe)
+import Control.Monad (when, unless, filterM, liftM, forM, forM_)
+import Data.Maybe ( isJust, isNothing, fromMaybe, maybeToList )
 import Data.List (isPrefixOf, isSuffixOf, nub)
 import Data.Char (isAlpha)
 import qualified Data.Map as M
 import qualified Data.Set as S
 
+import Control.Applicative ((<$>))
 
 -- the name of the c2hs pre-compiled header file
 precompFile = "precompchs.bin"
@@ -90,25 +107,159 @@ gtk2hsUserHooks = simpleUserHooks {
     hookedPrograms = [typeGenProgram, signalGenProgram, c2hsLocal],
     hookedPreProcessors = [("chs", ourC2hs)],
     confHook = \pd cf ->
-      confHook simpleUserHooks pd cf >>= return . adjustLocalBuildInfo,
+      (fmap adjustLocalBuildInfo (confHook simpleUserHooks pd cf)),
     postConf = \args cf pd lbi -> do
       genSynthezisedFiles (fromFlag (configVerbosity cf)) pd lbi
       postConf simpleUserHooks args cf pd lbi,
     buildHook = \pd lbi uh bf -> fixDeps pd >>= \pd ->
-                                 (buildHook simpleUserHooks) pd lbi uh bf,
-    copyHook = \pd lbi uh flags -> (copyHook simpleUserHooks) pd lbi uh flags >>
+                                 buildHook simpleUserHooks pd lbi uh bf,
+    copyHook = \pd lbi uh flags -> copyHook simpleUserHooks pd lbi uh flags >>
       installCHI pd lbi (fromFlag (copyVerbosity flags)) (fromFlag (copyDest flags)),
-		instHook = \pd lbi uh flags -> (instHook simpleUserHooks) pd lbi uh flags >>
+    instHook = \pd lbi uh flags ->
+#if defined(mingw32_HOST_OS) || defined(__MINGW32__)
+      installHook pd lbi uh flags >>
+      installCHI pd lbi (fromFlag (installVerbosity flags)) NoCopyDest,
+    regHook = registerHook
+#else
+      instHook simpleUserHooks pd lbi uh flags >>
       installCHI pd lbi (fromFlag (installVerbosity flags)) NoCopyDest
+#endif
   }
 
+------------------------------------------------------------------------------
+-- Lots of stuff for windows ghci support
+------------------------------------------------------------------------------
+
+getDlls :: [FilePath] -> IO [FilePath]
+getDlls dirs = filter ((== ".dll") . takeExtension) . concat <$>
+    mapM getDirectoryContents dirs
+
+fixLibs :: [FilePath] -> [String] -> [String]
+fixLibs dlls = concatMap $ \ lib ->
+    case filter (("lib" ++ lib) `isPrefixOf`) dlls of
+                dll:_ -> [dropExtension dll]
+                _     -> if lib == "z" then [] else [lib]
+
+-- The following code is a big copy-and-paste job from the sources of
+-- Cabal 1.8 just to be able to fix a field in the package file. Yuck.
+
+#if CABAL_VERSION_CHECK(1,8,0)
+        
+installHook :: PackageDescription -> LocalBuildInfo
+                   -> UserHooks -> InstallFlags -> IO ()
+installHook pkg_descr localbuildinfo _ flags = do
+  let copyFlags = defaultCopyFlags {
+                      copyDistPref   = installDistPref flags,
+                      copyDest       = toFlag NoCopyDest,
+                      copyVerbosity  = installVerbosity flags
+                  }
+  install pkg_descr localbuildinfo copyFlags
+  let registerFlags = defaultRegisterFlags {
+                          regDistPref  = installDistPref flags,
+                          regInPlace   = installInPlace flags,
+                          regPackageDB = installPackageDB flags,
+                          regVerbosity = installVerbosity flags
+                      }
+  when (hasLibs pkg_descr) $ register pkg_descr localbuildinfo registerFlags
+
+registerHook :: PackageDescription -> LocalBuildInfo
+        -> UserHooks -> RegisterFlags -> IO ()
+registerHook pkg_descr localbuildinfo _ flags =
+    if hasLibs pkg_descr
+    then register pkg_descr localbuildinfo flags
+    else setupMessage verbosity
+           "Package contains no library to register:" (packageId pkg_descr)
+  where verbosity = fromFlag (regVerbosity flags)
+
+register :: PackageDescription -> LocalBuildInfo
+         -> RegisterFlags -- ^Install in the user's database?; verbose
+         -> IO ()
+register pkg@PackageDescription { library       = Just lib  }
+         lbi@LocalBuildInfo     { libraryConfig = Just clbi } regFlags
+  = do
+
+    installedPkgInfoRaw <- generateRegistrationInfo
+                           verbosity pkg lib lbi clbi inplace distPref
+
+    dllsInScope <- getSearchPath >>= (filterM doesDirectoryExist) >>= getDlls
+    let libs = fixLibs dllsInScope (extraLibraries installedPkgInfoRaw)
+        installedPkgInfo = installedPkgInfoRaw {
+                                extraGHCiLibraries = libs }
+
+     -- Three different modes:
+    case () of
+     _ | modeGenerateRegFile   -> die "Generate Reg File not supported"
+       | modeGenerateRegScript -> die "Generate Reg Script not supported"
+       | otherwise             -> registerPackage verbosity
+                                    installedPkgInfo pkg lbi inplace packageDb
+
+  where
+    modeGenerateRegFile = isJust (flagToMaybe (regGenPkgConf regFlags))
+    modeGenerateRegScript = fromFlag (regGenScript regFlags)
+    inplace   = fromFlag (regInPlace regFlags)
+    packageDb = case flagToMaybe (regPackageDB regFlags) of
+                    Just db -> db
+                    Nothing -> registrationPackageDB (withPackageDB lbi)
+    distPref  = fromFlag (regDistPref regFlags)
+    verbosity = fromFlag (regVerbosity regFlags)
+
+register _ _ regFlags = notice verbosity "No package to register"
+  where
+    verbosity = fromFlag (regVerbosity regFlags)
+
+#else
+installHook :: PackageDescription -> LocalBuildInfo
+                   -> UserHooks -> InstallFlags -> IO ()
+installHook pkg_descr localbuildinfo _ flags = do
+  let copyFlags = defaultCopyFlags {
+                      copyDistPref   = installDistPref flags,
+                      copyInPlace    = installInPlace flags,
+                      copyUseWrapper = installUseWrapper flags,
+                      copyDest       = toFlag NoCopyDest,
+                      copyVerbosity  = installVerbosity flags
+                  }
+  install pkg_descr localbuildinfo copyFlags
+  let registerFlags = defaultRegisterFlags {
+                          regDistPref  = installDistPref flags,
+                          regInPlace   = installInPlace flags,
+                          regPackageDB = installPackageDB flags,
+                          regVerbosity = installVerbosity flags
+                      }
+  when (hasLibs pkg_descr) $ register pkg_descr localbuildinfo registerFlags
+
+registerHook :: PackageDescription -> LocalBuildInfo
+        -> UserHooks -> RegisterFlags -> IO ()
+registerHook pkg_descr localbuildinfo _ flags =
+    if hasLibs pkg_descr
+    then register pkg_descr localbuildinfo flags
+    else setupMessage verbosity
+           "Package contains no library to register:" (packageId pkg_descr)
+  where verbosity = fromFlag (regVerbosity flags)
+
+register :: PackageDescription -> LocalBuildInfo
+         -> RegisterFlags -- ^Install in the user's database?; verbose
+         -> IO ()
+register pkg_descr lbi regFlags = do
+  let verbosity = fromFlag (regVerbosity regFlags)
+  warn verbosity "Cannot register ghci libraries with Cabal 1.6 (need 1.8)."
+  Register.register pkg_descr lbi regFlags
+  
+#endif
+
+------------------------------------------------------------------------------
 -- This is a hack for Cabal-1.8, It is not needed in Cabal-1.9.1 or later
+------------------------------------------------------------------------------
+
 adjustLocalBuildInfo :: LocalBuildInfo -> LocalBuildInfo
 adjustLocalBuildInfo lbi =
   let extra = (Just libBi, [])
       libBi = emptyBuildInfo { includeDirs = [ autogenModulesDir lbi
                                              , buildDir lbi ] }
    in lbi { localPkgDescr = updatePackageDescription extra (localPkgDescr lbi) }
+
+------------------------------------------------------------------------------
+-- Processing .chs files with our local c2hs.
+------------------------------------------------------------------------------
 
 ourC2hs :: BuildInfo -> LocalBuildInfo -> PreProcessor
 ourC2hs bi lbi = PreProcessor {
@@ -151,7 +302,7 @@ getCppOptions :: BuildInfo -> LocalBuildInfo -> [String]
 getCppOptions bi lbi
     = nub $
       ["-I" ++ dir | dir <- PD.includeDirs bi]
-   ++ [opt | opt@('-':c:_) <- (PD.cppOptions bi ++ PD.ccOptions bi), c `elem` "DIU"]
+   ++ [opt | opt@('-':c:_) <- PD.cppOptions bi ++ PD.ccOptions bi, c `elem` "DIU"]
 
 installCHI :: PackageDescription -- ^information from the .cabal file
         -> LocalBuildInfo -- ^information from the configure step
@@ -161,14 +312,13 @@ installCHI pkg@PD.PackageDescription { library = Just lib } lbi verbosity copyde
   let InstallDirs { libdir = libPref } = absoluteInstallDirs pkg lbi copydest
   -- cannot use the recommended 'findModuleFiles' since it fails if there exists
   -- a modules that does not have a .chi file
-  mFiles <- mapM (findFileWithExtension' ["chi"] [buildDir lbi])
-                 (map toFilePath
+  mFiles <- mapM (findFileWithExtension' ["chi"] [buildDir lbi] . toFilePath)
 #if CABAL_VERSION_CHECK(1,8,0)
                    (PD.libModules lib)
 #else
                    (PD.libModules pkg)
 #endif
-                 )
+                 
   let files = [ f | Just f <- mFiles ]
 #if CABAL_VERSION_CHECK(1,8,0)
   installOrdinaryFiles verbosity libPref files
@@ -184,13 +334,13 @@ installCHI _ _ _ _ = return ()
 ------------------------------------------------------------------------------
 
 typeGenProgram :: Program
-typeGenProgram = (simpleProgram "gtk2hsTypeGen")
+typeGenProgram = simpleProgram "gtk2hsTypeGen"
 
 signalGenProgram :: Program
-signalGenProgram = (simpleProgram "gtk2hsHookGenerator")
+signalGenProgram = simpleProgram "gtk2hsHookGenerator"
 
 c2hsLocal :: Program
-c2hsLocal = (simpleProgram "gtk2hsC2hs")
+c2hsLocal = simpleProgram "gtk2hsC2hs"
 
 genSynthezisedFiles :: Verbosity -> PackageDescription -> LocalBuildInfo -> IO ()
 genSynthezisedFiles verb pd lbi = do
@@ -223,7 +373,7 @@ genSynthezisedFiles verb pd lbi = do
          res <- rawSystemProgramStdoutConf verb prog (withPrograms lbi) args
          rewriteFile outFile res
 
-  (flip mapM_) (filter (\(tag,_) -> "x-types-" `isPrefixOf` tag && "file" `isSuffixOf` tag) xList) $
+  forM_ (filter (\(tag,_) -> "x-types-" `isPrefixOf` tag && "file" `isSuffixOf` tag) xList) $
     \(fileTag, f) -> do
       let tag = reverse (drop 4 (reverse fileTag))
       info verb ("Ensuring that class hierarchy in "++f++" is up-to-date.")
@@ -244,7 +394,7 @@ getPkgConfigPackages verbosity lbi pkg =
   sequence
     [ do version <- pkgconfig ["--modversion", display pkgname]
          case simpleParse version of
-           Nothing -> die $ "parsing output of pkg-config --modversion failed"
+           Nothing -> die "parsing output of pkg-config --modversion failed"
            Just v  -> return (PackageIdentifier pkgname v)
     | Dependency pkgname _ <- concatMap pkgconfigDepends (allBuildInfo pkg) ]
   where
@@ -309,9 +459,9 @@ instance Ord ModDep where
 extractDeps :: ModDep -> IO ModDep
 extractDeps md@ModDep { mdLocation = Nothing } = return md
 extractDeps md@ModDep { mdLocation = Just f } = withUTF8FileContents f $ \con -> do
-  let findImports acc (('{':'#':xs):xxs) = case (dropWhile ((==) ' ') xs) of
+  let findImports acc (('{':'#':xs):xxs) = case (dropWhile (' ' ==) xs) of
         ('i':'m':'p':'o':'r':'t':' ':ys) ->
-          case simpleParse (takeWhile ((/=) '#') ys) of
+          case simpleParse (takeWhile ('#' /=) ys) of
             Just m -> findImports (m:acc) xxs 
             Nothing -> die ("cannot parse chs import in "++f++":\n"++
                             "offending line is {#"++xs)
@@ -337,3 +487,17 @@ sortTopological ms = reverse $ fst $ foldl visit ([], S.empty) (map mdOriginal m
         Just md -> (md:out', visited')
           where
             (out',visited') = foldl visit (out, m `S.insert` visited) (mdRequires md)
+
+-- Check user whether install gtk2hs-buildtools correctly.
+checkGtk2hsBuildtools :: [String] -> IO ()
+checkGtk2hsBuildtools programs = do
+  programInfos <- mapM (\ name -> do
+                         location <- programFindLocation (simpleProgram name) normal
+                         return (name, location)
+                      ) programs
+  let printError name = do
+        putStrLn $ "Cannot find " ++ name ++ "\n" 
+                 ++ "Please install `gtk2hs-buildtools` first and check that the install directory is in your PATH (e.g. HOME/.cabal/bin)."
+        exitFailure
+  forM_ programInfos $ \ (name, location) ->
+    when (isNothing location) (printError name) 
