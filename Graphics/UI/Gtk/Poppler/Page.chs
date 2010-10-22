@@ -79,7 +79,6 @@ import Graphics.UI.Gtk.Abstract.Widget (Rectangle (..), Color (..))
 {#import Graphics.UI.Gtk.Poppler.Types#}
 import Graphics.UI.Gtk.Poppler.Structs
 import Control.Monad.Reader (ReaderT(runReaderT), ask, MonadIO, liftIO)
-
 import Graphics.Rendering.Cairo.Internal (Render(..), bracketR)
 
 {# context lib="poppler" prefix="poppler" #}
@@ -89,9 +88,8 @@ import Graphics.Rendering.Cairo.Internal (Render(..), bracketR)
 -- instead
 pageRender :: PageClass page => page
  -> Render ()
-pageRender page = do
-  cairo <- ask
-  liftIO $ {#call poppler_page_render #} (toPage page) cairo
+pageRender page = 
+  ask >>= \ x -> liftIO ({#call poppler_page_render #} (toPage page) x)
 
 -- | First scale the document to match the specified pixels per point, then render the rectangle given by
 -- the upper left corner at (@srcX@, @srcY@) and @srcWidth@ and @srcHeight@. This function is for rendering

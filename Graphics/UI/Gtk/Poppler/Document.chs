@@ -135,7 +135,7 @@ documentNewFromFile ::
  -> Maybe String  -- ^ @password@ password to unlock the file with, or 'Nothing' 
  -> IO (Maybe Document) -- ^ returns  A newly created 'Document', or 'Nothing'  
 documentNewFromFile uri password = 
-  maybeNull (makeNewGObject mkDocument) $
+  maybeNull (wrapNewGObject mkDocument) $
   withUTFString uri $ \ uriPtr -> 
   maybeWith withUTFString password $ \ passwordPtr -> 
       propagateGError ({# call poppler_document_new_from_file #} 
@@ -149,7 +149,7 @@ documentNewFromData ::
  -> Maybe String  -- ^ @password@ password to unlock the file with, or 'Nothing' 
  -> IO (Maybe Document) -- ^ returns  A newly created 'Document', or 'Nothing'  
 documentNewFromData dat password = 
-  maybeNull (makeNewGObject mkDocument) $
+  maybeNull (wrapNewGObject mkDocument) $
   withUTFString dat $ \ datPtr -> 
   maybeWith withUTFString password $ \ passwordPtr -> 
       propagateGError ({#call poppler_document_new_from_data #}
@@ -239,7 +239,7 @@ psFileNew :: DocumentClass doc => doc
  -> Int  -- ^ @nPages@    the number of pages to print    
  -> IO PSFile
 psFileNew doc filename firstPage nPages =  
-  makeNewGObject mkPSFile $ 
+  wrapNewGObject mkPSFile $ 
   withUTFString filename $ \ filenamePtr -> 
   {#call poppler_ps_file_new #}
     (toDocument doc)
@@ -283,7 +283,7 @@ documentGetAttachments doc = do
 -- | Returns the root 'IndexIter' for document, or 'Nothing'.
 indexIterNew :: DocumentClass doc => doc -> IO (Maybe IndexIter)
 indexIterNew doc =
-  maybeNull (makeNewGObject mkIndexIter) $
+  maybeNull (wrapNewGObject mkIndexIter) $
   {#call poppler_index_iter_new #} (toDocument doc)
 
 -- | Creates a new 'IndexIter' as a copy of iter.
@@ -324,7 +324,7 @@ indexIterGetAction iter =
 -- |
 fontInfoNew :: DocumentClass doc => doc -> IO FontInfo  
 fontInfoNew doc =
-  makeNewGObject mkFontInfo $
+  wrapNewGObject mkFontInfo $
   {#call poppler_font_info_new#} (toDocument doc)
 
 -- | 
