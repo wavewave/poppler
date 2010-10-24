@@ -30,13 +30,13 @@
 module Graphics.UI.Gtk.Poppler.Action (
 -- * Types,
     Action,
-    ActionClass,
     Dest,
-    DestClass,
 
 -- * Methods
     actionCopy,
     destCopy,
+    makeNewAction,
+    makeNewDest,
     ) where
 
 import Control.Monad
@@ -52,14 +52,34 @@ import Graphics.UI.Gtk.Poppler.Enums
 
 {# context lib="poppler" prefix="poppler" #}
 
+{#pointer *Action foreign newtype #}
+
+makeNewAction :: Ptr Action -> IO Action
+makeNewAction rPtr = do
+  action <- newForeignPtr rPtr action_free
+  return (Action action)
+
+foreign import ccall unsafe "&poppler_action_free"
+  action_free :: FinalizerPtr Action
+
+{#pointer *Dest foreign newtype #}
+
+makeNewDest :: Ptr Dest -> IO Dest
+makeNewDest rPtr = do
+  dest <- newForeignPtr rPtr dest_free
+  return (Dest dest)
+
+foreign import ccall unsafe "&poppler_dest_free"
+  dest_free :: FinalizerPtr Dest
+
 -- | Copies action, creating an identical 'Action'.
-actionCopy :: ActionClass action => action -> IO Action
+actionCopy :: Action -> IO Action
 actionCopy action =
-  makeNewGObject mkAction $
-  {#call poppler_action_copy #} (toAction action)
+  {#call poppler_action_copy #} action
+  >>= makeNewAction
 
 -- | Copies dest, creating an identical 'Dest'.
-destCopy :: DestClass dest => dest -> IO Dest
+destCopy :: Dest -> IO Dest
 destCopy dest =
-  makeNewGObject mkDest $
-  {#call poppler_dest_copy #} (toDest dest)
+  {#call poppler_dest_copy #} dest
+  >>= makeNewDest

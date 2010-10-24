@@ -41,13 +41,11 @@ module Graphics.UI.Gtk.Poppler.Document (
     Page,
     PageClass,
     IndexIter,
-    IndexIterClass,
     FontsIter,
     FontsIterClass,
     FontInfo,
     FontInfoClass,
     Dest,
-    DestClass,
     FormField,
     Action,
     PSFile,
@@ -124,6 +122,7 @@ import System.Glib.GError
 import System.Glib.GObject
 import System.Glib.UTFString
 import Graphics.UI.Gtk.Poppler.Enums
+import Graphics.UI.Gtk.Poppler.Action (Action, Dest, makeNewAction, makeNewDest)
 {#import Graphics.UI.Gtk.Poppler.Types#}
 
 {# context lib="poppler" prefix="poppler" #}
@@ -183,7 +182,7 @@ documentGetPage :: DocumentClass doc => doc
  -> Int  -- ^ @index@    a page index             
  -> IO Page -- ^ returns  The 'Page' at index 
 documentGetPage doc index = 
-  makeNewGObject mkPage $ 
+  wrapNewGObject mkPage $ 
   {#call poppler_document_get_page#} (toDocument doc) (fromIntegral index)
   
 -- | Returns the 'Page' reference by label. This object is owned by the caller. label is a
@@ -195,7 +194,7 @@ documentGetPageByLabel :: DocumentClass doc => doc
  -> String -- ^ @label@    a page label                         
  -> IO Page -- ^ returns  The 'Page' referenced by label 
 documentGetPageByLabel doc label = 
-  makeNewGObject mkPage $ 
+  wrapNewGObject mkPage $ 
   withUTFString label $ \ labelPtr -> 
   {#call poppler_document_get_page_by_label #} (toDocument doc) labelPtr
 
@@ -210,10 +209,7 @@ documentFindDest doc linkName =
                   linkNamePtr
       if destPtr == nullPtr
          then return Nothing
-         else do
-           dest <- makeNewGObject mkDest $ return destPtr
-           {#call unsafe poppler_dest_free #} dest
-           return $ Just dest
+         else liftM Just $ makeNewDest (castPtr destPtr)
            
 -- | Returns 'True' of document has any attachments.
 documentHasAttachments :: DocumentClass doc => doc
@@ -227,7 +223,7 @@ documentGetFormField :: DocumentClass doc => doc
  -> Int  -- ^ @id@       an id of a 'FormField'                 
  -> IO (Maybe FormField)
 documentGetFormField doc id = 
-  maybeNull (makeNewGObject mkFormField) $
+  maybeNull (wrapNewGObject mkFormField) $
   {#call poppler_document_get_form_field #} 
     (toDocument doc) 
     (fromIntegral id)
@@ -276,50 +272,62 @@ documentGetAttachments :: DocumentClass doc => doc
 documentGetAttachments doc = do
   glistPtr <- {#call poppler_document_get_attachments #} (toDocument doc)
   list <- fromGList glistPtr
-  attachs <- mapM (makeNewGObject mkAttachment . return) list
+  attachs <- mapM (wrapNewGObject mkAttachment . return) list
   {#call unsafe g_list_free #} glistPtr
   return attachs
 
 -- | Returns the root 'IndexIter' for document, or 'Nothing'.
 indexIterNew :: DocumentClass doc => doc -> IO (Maybe IndexIter)
-indexIterNew doc =
-  maybeNull (wrapNewGObject mkIndexIter) $
-  {#call poppler_index_iter_new #} (toDocument doc)
+indexIterNew doc = do
+  iterPtr <- {#call poppler_index_iter_new #} (toDocument doc)
+  if iterPtr == nullPtr
+     then return Nothing
+     else liftM Just (makeNewIndexIter (castPtr iterPtr))
+
+{#pointer *IndexIter foreign newtype #}
+
+makeNewIndexIter :: Ptr IndexIter -> IO IndexIter
+makeNewIndexIter rPtr = do
+  iter <- newForeignPtr rPtr indexIter_free
+  return (IndexIter iter)
+
+foreign import ccall unsafe "&poppler_index_iter_free"
+  indexIter_free :: FinalizerPtr IndexIter
 
 -- | Creates a new 'IndexIter' as a copy of iter.
-indexIterCopy :: IndexIterClass iter => iter -> IO IndexIter
+indexIterCopy :: IndexIter -> IO IndexIter
 indexIterCopy iter = 
-  makeNewGObject mkIndexIter $
-  {#call poppler_index_iter_copy #} (toIndexIter iter)
+  {#call poppler_index_iter_copy #} iter
+  >>= makeNewIndexIter
 
 -- | Returns a newly created child of parent, or 'Nothing' if the iter has no child. See
 -- 'indexIterNew' for more information on this function.
-indexIterGetChild :: IndexIterClass iter => iter -> IO (Maybe IndexIter)
-indexIterGetChild iter = 
-  maybeNull (makeNewGObject mkIndexIter) $
-  {#call poppler_index_iter_get_child #} (toIndexIter iter)
+indexIterGetChild :: IndexIter -> IO (Maybe IndexIter)
+indexIterGetChild iter = do
+  iterPtr <- {#call poppler_index_iter_get_child #} iter
+  if iterPtr == nullPtr
+     then return Nothing
+     else liftM Just (makeNewIndexIter iterPtr)
 
 -- | Returns whether this node should be expanded by default to the user. The document can provide a hint
 -- as to how the document's index should be expanded initially.
-indexIterIsOpen :: IndexIterClass iter => iter
- -> IO Bool  -- ^ returns 'True', if the document wants iter to be expanded 
+indexIterIsOpen :: IndexIter -> IO Bool  -- ^ returns 'True', if the document wants iter to be expanded 
 indexIterIsOpen iter =
   liftM toBool $
-  {#call poppler_index_iter_is_open #} (toIndexIter iter)
+  {#call poppler_index_iter_is_open #} iter
 
 -- | Sets iter to point to the next action at the current level, if valid. See 'indexIterNew'
 -- for more information.
-indexIterNext :: IndexIterClass iter => iter
- -> IO Bool -- ^ returns 'True', if iter was set to the next action 
+indexIterNext :: IndexIter -> IO Bool -- ^ returns 'True', if iter was set to the next action 
 indexIterNext iter =
   liftM toBool $
-  {#call poppler_index_iter_next #} (toIndexIter iter)
+  {#call poppler_index_iter_next #} iter
 
 -- | Returns the 'Action' associated with iter. 
-indexIterGetAction :: IndexIterClass iter => iter -> IO Action
+indexIterGetAction :: IndexIter -> IO Action
 indexIterGetAction iter =
-  makeNewGObject mkAction $
-  {#call poppler_index_iter_get_action #} (toIndexIter iter)
+  {#call poppler_index_iter_get_action #} iter
+  >>= makeNewAction . castPtr
 
 -- |
 fontInfoNew :: DocumentClass doc => doc -> IO FontInfo  
@@ -330,7 +338,7 @@ fontInfoNew doc =
 -- | 
 fontsIterCopy :: FontsIterClass iter => iter -> IO FontsIter
 fontsIterCopy iter =
-  makeNewGObject mkFontsIter $
+  wrapNewGObject mkFontsIter $
   {#call poppler_fonts_iter_copy #} (toFontsIter iter)
 
 -- |

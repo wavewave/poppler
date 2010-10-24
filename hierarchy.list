@@ -341,17 +341,10 @@
 
 # For poppler
         PopplerDocument as Document, poppler_document_get_type if poppler
-        PopplerIndexIter as IndexIter, poppler_index_iter_get_type if poppler
         PopplerFontsIter as FontsIter, poppler_fonts_iter_get_type if poppler
         PopplerPage as Page, poppler_page_get_type if poppler
-        PopplerDest as Dest, poppler_dest_get_type if poppler
         PopplerFormField as FormField, poppler_form_field_get_type if poppler
         PopplerPSFile as PSFile, poppler_ps_file_get_type if poppler
-        PopplerPageTransition as PageTransition, poppler_page_transition_get_type if poppler
-        PopplerLinkMapping as LinkMapping, poppler_link_mapping_get_type if poppler
-        PopplerImageMapping as ImageMapping, poppler_image_mapping_get_type if poppler
-        PopplerFormFieldMapping as FormFieldMapping, poppler_form_field_mapping_get_type if poppler
         PopplerFontInfo as FontInfo, poppler_font_info_get_type if poppler
         PopplerAttachment as Attachment, poppler_attachment_get_type if poppler
-        PopplerAction as Action, poppler_action_get_type if poppler
         PopplerLayer as Layer, poppler_layer_get_type if poppler

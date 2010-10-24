@@ -33,13 +33,9 @@ module Graphics.UI.Gtk.Poppler.Page (
     PopplerRectangle (..),
     PopplerColor (..),
     ImageMapping,
-    ImageMappingClass,
     PageTransition,
-    PageTransitionClass,
     LinkMapping,
-    LinkMappingClass,
     FormFieldMapping,
-    FormFieldMappingClass,
 
 -- * Enums
     SelectionStyle (..),
@@ -196,9 +192,21 @@ pageGetDuration page =
 -- | Returns the transition effect of page
 pageGetTransition :: PageClass page => page
  -> IO (Maybe PageTransition) -- ^ returns a 'PageTransition' or 'Nothing'. 
-pageGetTransition page =
-  maybeNull (makeNewGObject mkPageTransition) $ 
-  {#call poppler_page_get_transition #} (toPage page)
+pageGetTransition page = do
+  ptr <- {#call poppler_page_get_transition #} (toPage page)
+  if ptr == nullPtr
+     then return Nothing
+     else liftM Just $ makeNewPageTransition (castPtr ptr)
+
+{#pointer *PageTransition foreign newtype #}
+
+makeNewPageTransition :: Ptr PageTransition -> IO PageTransition
+makeNewPageTransition rPtr = do
+  transition <- newForeignPtr rPtr page_transition_free
+  return (PageTransition transition)
+
+foreign import ccall unsafe "&poppler_page_transition_free"
+  page_transition_free :: FinalizerPtr PageTransition
 
 -- | Returns a list of 'LinkMapping' items that map from a location on page to a 'Action'. 
 pageGetLinkMapping :: PageClass page => page
@@ -206,9 +214,19 @@ pageGetLinkMapping :: PageClass page => page
 pageGetLinkMapping page = do
   glistPtr <- {#call poppler_page_get_link_mapping #} (toPage page)
   list <- fromGList glistPtr
-  mappings <- mapM (makeNewGObject mkLinkMapping . return) list
+  mappings <- mapM makeNewLinkMapping list
   {#call unsafe poppler_page_free_link_mapping #} (castPtr glistPtr)
   return mappings
+
+{#pointer *LinkMapping foreign newtype #}
+
+makeNewLinkMapping :: Ptr LinkMapping -> IO LinkMapping
+makeNewLinkMapping rPtr = do
+  linkMapping <- newForeignPtr rPtr poppler_link_mapping_free
+  return (LinkMapping linkMapping)
+
+foreign import ccall unsafe "&poppler_link_mapping_free"
+  poppler_link_mapping_free :: FinalizerPtr LinkMapping
 
 -- | Returns a list of 'ImageMapping' items that map from a location on page to a 'Action'. 
 pageGetImageMapping :: PageClass page => page
@@ -216,9 +234,19 @@ pageGetImageMapping :: PageClass page => page
 pageGetImageMapping page = do
   glistPtr <- {#call poppler_page_get_image_mapping #} (toPage page)
   list <- fromGList glistPtr
-  mappings <- mapM (makeNewGObject mkImageMapping . return) list
+  mappings <- mapM makeNewImageMapping list
   {#call unsafe poppler_page_free_image_mapping #} (castPtr glistPtr)
   return mappings
+
+{#pointer *ImageMapping foreign newtype #}
+
+makeNewImageMapping :: Ptr ImageMapping -> IO ImageMapping
+makeNewImageMapping rPtr = do
+  imageMapping <- newForeignPtr rPtr poppler_image_mapping_free
+  return (ImageMapping imageMapping)
+
+foreign import ccall unsafe "&poppler_image_mapping_free"
+  poppler_image_mapping_free :: FinalizerPtr ImageMapping
 
 -- | Returns a list of 'FormFieldMapping' items that map from a location on page to a 'Action'. 
 pageGetFormFieldMapping :: PageClass page => page
@@ -226,9 +254,19 @@ pageGetFormFieldMapping :: PageClass page => page
 pageGetFormFieldMapping page = do
   glistPtr <- {#call poppler_page_get_form_field_mapping #} (toPage page)
   list <- fromGList glistPtr
-  mappings <- mapM (makeNewGObject mkFormFieldMapping . return) list
+  mappings <- mapM makeNewFormFieldMapping list
   {#call unsafe poppler_page_free_image_mapping #} (castPtr glistPtr)
   return mappings
+
+{#pointer *FormFieldMapping foreign newtype #}
+
+makeNewFormFieldMapping :: Ptr FormFieldMapping -> IO FormFieldMapping
+makeNewFormFieldMapping rPtr = do
+  formFieldMapping <- newForeignPtr rPtr poppler_form_field_mapping_free
+  return (FormFieldMapping formFieldMapping)
+
+foreign import ccall unsafe "&poppler_form_field_mapping_free"
+  poppler_form_field_mapping_free :: FinalizerPtr FormFieldMapping
 
 -- | Returns a region containing the area that would be rendered by 'pageRenderSelection' or
 -- 'pageRenderSelectionToPixbuf' as a GList of PopplerRectangle.
