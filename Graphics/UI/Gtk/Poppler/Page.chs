@@ -175,11 +175,9 @@ pageFindText page text =
     mapM peekPopplerRectangle list
     
 -- | Retrieves the contents of the specified selection as text.
-pageGetText :: PageClass page => page -> SelectionStyle -> PopplerRectangle
- -> IO String  -- ^ returns selection string
-pageGetText page style rect = 
-  with rect $ \ rectPtr ->
-  {#call poppler_page_get_text #} (toPage page) ((fromIntegral . fromEnum) style) (castPtr rectPtr)
+pageGetText :: PageClass page => page -> IO String  -- ^ returns selection string
+pageGetText page = 
+  {#call poppler_page_get_text #} (toPage page)
   >>= peekUTFString
   
 -- | Returns the duration of page
