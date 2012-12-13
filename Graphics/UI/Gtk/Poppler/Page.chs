@@ -42,7 +42,7 @@ module Graphics.UI.Gtk.Poppler.Page (
 
 -- * Methods
     pageRender,
-    pageRenderToPixbuf,
+    -- pageRenderToPixbuf,
     pageGetSize,
     pageGetIndex,
     pageGetThumbnail,
@@ -57,7 +57,7 @@ module Graphics.UI.Gtk.Poppler.Page (
     pageGetFormFieldMapping,
     pageGetSelectionRegion,
     pageRenderSelection,
-    pageRenderSelectionToPixbuf,
+    -- pageRenderSelectionToPixbuf,
     ) where
 
 import Control.Monad
@@ -91,7 +91,7 @@ pageRender page =
 -- the upper left corner at (@srcX@, @srcY@) and @srcWidth@ and @srcHeight@. This function is for rendering
 -- a page that will be displayed. If you want to render a page that will be printed use
 -- 'pageRenderToPixbufForPrinting' instead
-pageRenderToPixbuf :: PageClass page => page
+{- pageRenderToPixbuf :: PageClass page => page
  -> Rectangle -- ^ @rect@      rectangle to render
  -> Double -- ^ @scale@      scale specified as pixels per point         
  -> Int -- ^ @rotation@   rotate the document by the specified degree 
@@ -107,6 +107,7 @@ pageRenderToPixbuf page (Rectangle x y width height) scale rotation pixbuf =
     (realToFrac scale)
     (fromIntegral rotation)
     pixbuf
+-}
 
 -- | Gets the size of page at the current scale and rotation.
 pageGetSize :: PageClass page => page 
@@ -312,12 +313,13 @@ pageRenderSelection page selection oldSelection style glyphColor backgroundColor
                   ((fromIntegral . fromEnum) style)
                   (castPtr glyphColorPtr)
                   (castPtr backgroundColorPtr)
-        
+      
 -- | Render the selection specified by selection for page into pixbuf. The selection will be rendered at
 -- scale, using @glyphColor@ for the glyphs and @backgroundColor@ for the selection background.
 -- 
 -- If non-'Nothing', @oldSelection@ specifies the selection that is already rendered in pixbuf, in which case
 -- this function will (some day) only render the changed part of the selection.
+{-
 pageRenderSelectionToPixbuf :: PageClass page => page  
  -> Double -- ^ @scale@            scale specified as pixels per point             
  -> Int -- ^ @rotation@         rotate the document by the specified degree     
@@ -343,3 +345,4 @@ pageRenderSelectionToPixbuf page scale rotation pixbuf selection oldSelection st
         ((fromIntegral . fromEnum) style)
         (castPtr glyphColorPtr)
         (castPtr backgroundColorPtr)
+-}
