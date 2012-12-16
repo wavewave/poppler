@@ -60,11 +60,22 @@ type AttachmentSave =
  -> Int 
  -> Bool
 
-{#pointer AttachmentSaveFunc#}
 
+{- typedef gboolean (*PopplerAttachmentSaveFunc) (const gchar  *buf,
+					       gsize         count,
+					       gpointer      data,
+					       GError      **error); -}
+-- {#pointer AttachmentSaveFunc#}
+
+type TAttachmentSaveFunc = CString -> {#type gsize#} -> Ptr ()  -> Ptr (Ptr ()) -> IO {#type gboolean#}
+
+type AttachmentSaveFunc = FunPtr TAttachmentSaveFunc
+ 
 foreign import ccall "wrapper" mkAttachmentSaveFunc ::
-  (Ptr Attachment -> CString -> {#type glong#} -> Ptr () -> IO {#type gboolean#})
-  -> IO AttachmentSaveFunc
+  TAttachmentSaveFunc -> IO AttachmentSaveFunc
+  -- TAttachmentSaveFunc -> IO AttachmentSaveFunc
+  -- (Ptr Attachment -> CString -> {#type glong#} -> Ptr () -> IO {#type gboolean#})
+  -- -> IO AttachmentSaveFunc
 
 -- | Saves @attachment@ to a file indicated by @filename@.
 -- Return 'True' if the file successfully saved
@@ -76,13 +87,17 @@ attachmentSave attachment filename =
   withUTFString filename $ \ filenamePtr -> 
       propagateGError ({#call poppler_attachment_save #} (toAttachment attachment) filenamePtr)
 
+
+
+
 -- |
 attachmentSaveToCallback :: AttachmentClass attachment => attachment
  -> AttachmentSave 
  -> IO Bool
 attachmentSaveToCallback attachment fun = 
   liftM toBool $ do
-    funcPtr <- mkAttachmentSaveFunc $ \_ s i _ -> do
+    funcPtr <- mkAttachmentSaveFunc $ \s i _ _ -> do
                  str <- peekUTFString s
                  return (fromBool (fun str (fromIntegral i)))
     {#call attachment_save_to_callback #} (toAttachment attachment) funcPtr (castFunPtrToPtr funcPtr) nullPtr
+

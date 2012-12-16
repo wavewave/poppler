@@ -70,12 +70,8 @@ module Graphics.UI.Gtk.Poppler.Types (
   ) where
 
 import Foreign.ForeignPtr (ForeignPtr, castForeignPtr, unsafeForeignPtrToPtr)
-#if __GLASGOW_HASKELL__>=704
 import Foreign.C.Types    (CULong(..), CUInt(..))
-#else
-import Foreign.C.Types    (CULong, CUInt)
-#endif
-import System.Glib.GType	(GType, typeInstanceIsA)
+import System.Glib.GType  (GType, typeInstanceIsA)
 import System.Glib.GObject
 
 {# context lib="poppler" prefix="poppler" #}
