@@ -40,7 +40,8 @@ Library
         build-depends:  base >= 4 && < 5, array, containers, 
                         mtl, bytestring,
                         glib >= 0.12 && < 0.13,
-                        cairo >= 0.12 && < 0.13
+                        cairo >= 0.12 && < 0.13,
+                        gtk3 >= 0.12
                         -- ,
                         -- gtk >= 0.12 && < 0.13
         build-tools:    gtk2hsC2hs, gtk2hsHookGenerator, gtk2hsTypeGen
@@ -62,4 +63,7 @@ Library
 		
         include-dirs:   .
         x-c2hs-Header:  glib/poppler.h
-        pkgconfig-depends: poppler-glib >= 0.12.4, gobject-2.0, glib-2.0, cairo >= 1.2.0, gdk-2.0, gdk-pixbuf-2.0, pango
+        pkgconfig-depends: poppler-glib >= 0.12.4, cairo >= 1.2.0, gdk-3.0, pango
+
+
+-- , gobject-2.0, glib-2.0, cairo >= 1.2.0, gdk-2.0, gdk-pixbuf-2.0, pango
