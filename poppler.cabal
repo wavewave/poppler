@@ -1,12 +1,12 @@
 Name:           poppler
-Version:        0.12.2.2
+Version:        0.12.2.3
 License:        GPL-2
 License-file:   COPYING
 Copyright:      (c) 2001-2010 The Gtk2Hs Team
 Author:         Andy Stewart
 Maintainer:     Ian-Woo Kim <ianwookim@gmail.com>
 Build-Type:     Custom
-Cabal-Version:  >= 1.6
+Cabal-Version:  >= 1.8
 Stability:      stable
 homepage:       http://www.haskell.org/gtk2hs/
 bug-reports:    http://hackage.haskell.org/trac/gtk2hs/
@@ -16,9 +16,11 @@ Description:    Poppler is a fork of the xpdf PDF viewer, to provide PDF renderi
 				And move to forward in a number of areas that don't fit within the goals of xpdf.
 Category:       Graphics
 Tested-With:    GHC == 7.4
-Extra-Source-Files: Gtk2HsSetup.hs
-					hierarchy.list
-					template-hsc-gtk2hs.h
+Extra-Source-Files: SetupWrapper.hs
+                    SetupMain.hs
+                    Gtk2HsSetup.hs
+		    hierarchy.list
+		    template-hsc-gtk2hs.h
 
 x-Types-File:      Graphics/UI/Gtk/Poppler/Types.chs
 x-Types-ModName:   Graphics.UI.Gtk.Poppler.Types
@@ -33,8 +35,8 @@ Data-Files:		PdfViewer.hs
                 Makefile
 
 Source-Repository head
-  type:         darcs
-  location:     http://patch-tag.com/r/AndyStewart/poppler
+  type:         git
+  location:     git://github.com/wavewave/poppler.git
 
 Library
         build-depends:  base >= 4 && < 5, array, containers, 
@@ -42,7 +44,7 @@ Library
                         glib >= 0.12 && < 0.13,
                         cairo >= 0.12 && < 0.13,
                         gtk >= 0.12 && < 0.13
---						haskell98, 
+
         build-tools:    gtk2hsC2hs, gtk2hsHookGenerator, gtk2hsTypeGen
 						
         exposed-modules:
