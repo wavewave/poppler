@@ -1,0 +1,7 @@
+poppler 
+-------
+
+0.12.3: 2 Mar 2014
+   * compatible with gtk2hs 0.12.5
+   * can be built against new gtk3 package with -fgtk3  
+   * build support with Cabal-1.18 
