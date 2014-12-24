@@ -6,9 +6,9 @@
 
 -- | Build a Gtk2hs package.
 --
-module Gtk2HsSetup ( 
-  gtk2hsUserHooks, 
-  getPkgConfigPackages, 
+module Gtk2HsSetup (
+  gtk2hsUserHooks,
+  getPkgConfigPackages,
   checkGtk2hsBuildtools,
   typeGenProgram,
   signalGenProgram,
@@ -55,8 +55,9 @@ import System.Directory ( doesFileExist, getDirectoryContents, doesDirectoryExis
 import Distribution.Version (Version(..))
 import Distribution.Verbosity
 import Control.Monad (when, unless, filterM, liftM, forM, forM_)
-import Data.Maybe ( isJust, isNothing, fromMaybe, maybeToList )
-import Data.List (isPrefixOf, isSuffixOf, stripPrefix, nub)
+import Data.Maybe ( isJust, isNothing, fromMaybe, maybeToList, catMaybes )
+import Data.List (isPrefixOf, isSuffixOf, nub, minimumBy, stripPrefix, tails )
+import Data.Ord as Ord (comparing)
 import Data.Char (isAlpha, isNumber)
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -113,15 +114,22 @@ getDlls dirs = filter ((== ".dll") . takeExtension) . concat <$>
 fixLibs :: [FilePath] -> [String] -> [String]
 fixLibs dlls = concatMap $ \ lib ->
     case filter (isLib lib) dlls of
-                dll:_ -> [dropExtension dll]
-                _     -> if lib == "z" then [] else [lib]
+                dlls@(_:_) -> [dropExtension (pickDll dlls)]
+                _          -> if lib == "z" then [] else [lib]
   where
+    -- If there are several .dll files matching the one we're after then we
+    -- just have to guess. For example for recent Windows cairo builds we get
+    -- libcairo-2.dll libcairo-gobject-2.dll libcairo-script-interpreter-2.dll
+    -- Our heuristic is to pick the one with the shortest name.
+    -- Yes this is a hack but the proper solution is hard: we would need to
+    -- parse the .a file and see which .dll file(s) it needed to link to.
+    pickDll = minimumBy (Ord.comparing length)
     isLib lib dll =
         case stripPrefix ("lib"++lib) dll of
             Just ('.':_)                -> True
             Just ('-':n:_) | isNumber n -> True
             _                           -> False
-        
+
 -- The following code is a big copy-and-paste job from the sources of
 -- Cabal 1.8 just to be able to fix a field in the package file. Yuck.
 
@@ -154,12 +162,16 @@ registerHook pkg_descr localbuildinfo _ flags =
 register :: PackageDescription -> LocalBuildInfo
          -> RegisterFlags -- ^Install in the user's database?; verbose
          -> IO ()
-register pkg@(library       -> Just lib )
-         lbi@(libraryConfig -> Just clbi) regFlags
+register pkg@PackageDescription { library       = Just lib  } lbi regFlags
   = do
+    let clbi = LBI.getComponentLocalBuildInfo lbi LBI.CLibName
 
     installedPkgInfoRaw <- generateRegistrationInfo
+#if CABAL_VERSION_CHECK(1,22,0)
+                           verbosity pkg lib lbi clbi inplace False distPref packageDb
+#else
                            verbosity pkg lib lbi clbi inplace distPref
+#endif
 
     dllsInScope <- getSearchPath >>= (filterM doesDirectoryExist) >>= getDlls
     let libs = fixLibs dllsInScope (extraLibraries installedPkgInfoRaw)
@@ -168,7 +180,7 @@ register pkg@(library       -> Just lib )
 
      -- Three different modes:
     case () of
-     _ | modeGenerateRegFile   -> die "Generate Reg File not supported"
+     _ | modeGenerateRegFile   -> writeRegistrationFile installedPkgInfo
        | modeGenerateRegScript -> die "Generate Reg Script not supported"
        | otherwise             -> registerPackage verbosity
                                     installedPkgInfo pkg lbi inplace
@@ -180,6 +192,8 @@ register pkg@(library       -> Just lib )
 
   where
     modeGenerateRegFile = isJust (flagToMaybe (regGenPkgConf regFlags))
+    regFile             = fromMaybe (display (packageId pkg) <.> "conf")
+                                    (fromFlag (regGenPkgConf regFlags))
     modeGenerateRegScript = fromFlag (regGenScript regFlags)
     inplace   = fromFlag (regInPlace regFlags)
     packageDbs = nub $ withPackageDB lbi
@@ -187,6 +201,10 @@ register pkg@(library       -> Just lib )
     packageDb = registrationPackageDB packageDbs
     distPref  = fromFlag (regDistPref regFlags)
     verbosity = fromFlag (regVerbosity regFlags)
+
+    writeRegistrationFile installedPkgInfo = do
+      notice verbosity ("Creating package registration file: " ++ regFile)
+      writeUTF8File regFile (showInstalledPackageInfo installedPkgInfo)
 
 register _ _ regFlags = notice verbosity "No package to register"
   where
@@ -247,10 +265,23 @@ getCppOptions bi lbi
     = nub $
       ["-I" ++ dir | dir <- PD.includeDirs bi]
    ++ [opt | opt@('-':c:_) <- PD.cppOptions bi ++ PD.ccOptions bi, c `elem` "DIU"]
-   ++ ["-D__GLASGOW_HASKELL__="++show (ghcDefine . versionBranch . compilerVersion $ LBI.compiler lbi)]
+   ++ ["-D__GLASGOW_HASKELL__="++show (ghcDefine . ghcVersion . compilerId $ LBI.compiler lbi)]
  where
   ghcDefine (v1:v2:_) = v1 * 100 + v2
   ghcDefine _ = __GLASGOW_HASKELL__
+
+  ghcVersion :: CompilerId -> [Int]
+-- This version is nicer, but we need to know the Cabal version that includes the new CompilerId
+-- #if CABAL_VERSION_CHECK(1,19,2)
+--   ghcVersion (CompilerId GHC v _) = versionBranch v
+--   ghcVersion (CompilerId _ _ (Just c)) = ghcVersion c
+-- #else
+--   ghcVersion (CompilerId GHC v) = versionBranch v
+-- #endif
+--   ghcVersion _ = []
+-- This version should work fine for now
+  ghcVersion = concat . take 1 . map (read . (++"]") . takeWhile (/=']')) . catMaybes
+               . map (stripPrefix "CompilerId GHC (Version {versionBranch = ") . tails . show
 
 installCHI :: PackageDescription -- ^information from the .cabal file
         -> LocalBuildInfo -- ^information from the configure step
@@ -262,11 +293,11 @@ installCHI pkg@PD.PackageDescription { library = Just lib } lbi verbosity copyde
   -- a modules that does not have a .chi file
   mFiles <- mapM (findFileWithExtension' ["chi"] [buildDir lbi] . toFilePath)
                    (PD.libModules lib)
-                 
+
   let files = [ f | Just f <- mFiles ]
   installOrdinaryFiles verbosity libPref files
 
-  
+
 installCHI _ _ _ _ = return ()
 
 ------------------------------------------------------------------------------
@@ -292,13 +323,12 @@ c2hsLocal = (simpleProgram "gtk2hsC2hs") {
 
 genSynthezisedFiles :: Verbosity -> PackageDescription -> LocalBuildInfo -> IO ()
 genSynthezisedFiles verb pd lbi = do
-
   cPkgs <- getPkgConfigPackages verb lbi pd
 
   let xList = maybe [] (customFieldsBI . libBuildInfo) (library pd)
               ++customFieldsPD pd
       typeOpts :: String -> [ProgArg]
-      typeOpts tag = concat [ map (\val -> '-':'-':drop (length tag) field++'=':val) (words content)
+      typeOpts tag = concat [ map (\val -> '-':'-':drop (length tag) field ++ '=':val) (words content)
                             | (field,content) <- xList,
                               tag `isPrefixOf` field,
                               field /= (tag++"file")]
@@ -306,8 +336,9 @@ genSynthezisedFiles verb pd lbi = do
                  | PackageIdentifier name (Version (major:minor:_) _) <- cPkgs
                  , let name' = filter isAlpha (display name)
                  , tag <- name'
-                        : [ name' ++ "-" ++ show major ++ "." ++ show digit
-                          | digit <- [0,2..minor] ]
+                        :[ name' ++ "-" ++ show maj ++ "." ++ show d2
+                          | (maj, d2) <- [(maj,   d2) | maj <- [0..(major-1)], d2 <- [0,2..20]]
+                                      ++ [(major, d2) | d2 <- [0,2..minor]] ]
                  ]
 
       signalsOpts :: [ProgArg]
@@ -332,6 +363,29 @@ genSynthezisedFiles verb pd lbi = do
     Just f -> do
       info verb ("Ensuring that callback hooks in "++f++" are up-to-date.")
       genFile signalGenProgram signalsOpts f
+
+  writeFile "gtk2hs_macros.h" $ generateMacros cPkgs
+
+-- Based on Cabal/Distribution/Simple/Build/Macros.hs
+generateMacros :: [PackageId] -> String
+generateMacros cPkgs = concat $
+  "/* DO NOT EDIT: This file is automatically generated by Gtk2HsSetup.hs */\n\n" :
+  [ concat
+    ["/* package ",display pkgid," */\n"
+    ,"#define VERSION_",pkgname," ",show (display version),"\n"
+    ,"#define MIN_VERSION_",pkgname,"(major1,major2,minor) (\\\n"
+    ,"  (major1) <  ",major1," || \\\n"
+    ,"  (major1) == ",major1," && (major2) <  ",major2," || \\\n"
+    ,"  (major1) == ",major1," && (major2) == ",major2," && (minor) <= ",minor,")"
+    ,"\n\n"
+    ]
+  | pkgid@(PackageIdentifier name version) <- cPkgs
+  , let (major1:major2:minor:_) = map show (versionBranch version ++ repeat 0)
+        pkgname = map fixchar (display name)
+  ]
+  where fixchar '-' = '_'
+        fixchar '.' = '_'
+        fixchar c   = c
 
 --FIXME: Cabal should tell us the selected pkg-config package versions in the
 --       LocalBuildInfo or equivalent.
@@ -403,14 +457,14 @@ instance Ord ModDep where
 
 -- Extract the dependencies of this file. This is intentionally rather naive as it
 -- ignores CPP conditionals. We just require everything which means that the
--- existance of a .chs module may not depend on some CPP condition.  
+-- existance of a .chs module may not depend on some CPP condition.
 extractDeps :: ModDep -> IO ModDep
 extractDeps md@ModDep { mdLocation = Nothing } = return md
 extractDeps md@ModDep { mdLocation = Just f } = withUTF8FileContents f $ \con -> do
   let findImports acc (('{':'#':xs):xxs) = case (dropWhile (' ' ==) xs) of
         ('i':'m':'p':'o':'r':'t':' ':ys) ->
           case simpleParse (takeWhile ('#' /=) ys) of
-            Just m -> findImports (m:acc) xxs 
+            Just m -> findImports (m:acc) xxs
             Nothing -> die ("cannot parse chs import in "++f++":\n"++
                             "offending line is {#"++xs)
          -- no more imports after the first non-import hook
@@ -444,8 +498,8 @@ checkGtk2hsBuildtools programs = do
                          return (programName prog, location)
                       ) programs
   let printError name = do
-        putStrLn $ "Cannot find " ++ name ++ "\n" 
+        putStrLn $ "Cannot find " ++ name ++ "\n"
                  ++ "Please install `gtk2hs-buildtools` first and check that the install directory is in your PATH (e.g. HOME/.cabal/bin)."
         exitFailure
   forM_ programInfos $ \ (name, location) ->
-    when (isNothing location) (printError name) 
+    when (isNothing location) (printError name)
