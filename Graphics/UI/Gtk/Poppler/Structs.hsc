@@ -21,6 +21,7 @@
 --
 -- #hide
 
+#include <stdio.h>
 #include <glib-2.0/glib.h>
 #include <glib/poppler.h>
 #include "template-hsc-gtk2hs.h"

@@ -159,7 +159,11 @@ register pkg@(library       -> Just lib )
   = do
 
     installedPkgInfoRaw <- generateRegistrationInfo
-                           verbosity pkg lib lbi clbi inplace distPref
+#if CABAL_VERSION_CHECK(1,22,0)
+        verbosity pkg lib lbi clbi inplace False distPref packageDb
+#else
+        verbosity pkg lib lbi clbi inplace distPref
+#endif    
 
     dllsInScope <- getSearchPath >>= (filterM doesDirectoryExist) >>= getDlls
     let libs = fixLibs dllsInScope (extraLibraries installedPkgInfoRaw)
