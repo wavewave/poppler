@@ -69,7 +69,7 @@ Library
         extensions:     ForeignFunctionInterface
 		
         include-dirs:   .
-        x-c2hs-Header:  glib/poppler.h
+        x-c2hs-Header:  poppler.h
         if flag(gtk3) 
           pkgconfig-depends: poppler-glib >= 0.12.4, cairo >= 1.2.0, gdk-3.0, pango
         else
