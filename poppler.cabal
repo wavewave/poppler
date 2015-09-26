@@ -15,7 +15,7 @@ Description:    Poppler is a fork of the xpdf PDF viewer, to provide PDF renderi
                 library, to centralize the maintenance effort.
 				And move to forward in a number of areas that don't fit within the goals of xpdf.
 Category:       Graphics
-Tested-With:    GHC == 7.4, GHC == 7.6
+Tested-With:    GHC == 7.10
 Extra-Source-Files: SetupWrapper.hs
                     SetupMain.hs
                     Gtk2HsSetup.hs
