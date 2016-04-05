@@ -37,7 +37,7 @@ module Graphics.UI.Gtk.Poppler.Structs (
     peekPopplerColor,                
     ) where
     
-import Control.Monad		(liftM)
+import Control.Monad            (liftM)
 import Data.IORef
 import Control.Exception
 
@@ -51,7 +51,7 @@ import System.Glib.GObject (makeNewGObject)
 -- * Specifies x, y, width and height
 --
 data PopplerRectangle = PopplerRectangle Double Double Double Double
-		      deriving Show
+                      deriving Show
 
 instance Storable PopplerRectangle where
   sizeOf _ = #{const sizeof(PopplerRectangle)}
@@ -68,10 +68,10 @@ instance Storable PopplerRectangle where
 
 peekPopplerRectangle :: Ptr PopplerRectangle -> IO PopplerRectangle
 peekPopplerRectangle ptr = do
-    (x1_ ::#gtk2hs_type gdouble)	<- #{peek PopplerRectangle, x1} ptr
-    (y1_ ::#gtk2hs_type gdouble)	<- #{peek PopplerRectangle, y1} ptr
-    (x2_ ::#gtk2hs_type gdouble)	<- #{peek PopplerRectangle, x2} ptr
-    (y2_ ::#gtk2hs_type gdouble)	<- #{peek PopplerRectangle, y2} ptr
+    (x1_ ::#gtk2hs_type gdouble)        <- #{peek PopplerRectangle, x1} ptr
+    (y1_ ::#gtk2hs_type gdouble)        <- #{peek PopplerRectangle, y1} ptr
+    (x2_ ::#gtk2hs_type gdouble)        <- #{peek PopplerRectangle, x2} ptr
+    (y2_ ::#gtk2hs_type gdouble)        <- #{peek PopplerRectangle, y2} ptr
     return (PopplerRectangle (realToFrac x1_) (realToFrac y1_)
                              (realToFrac x2_) (realToFrac y2_))
       
@@ -89,7 +89,8 @@ instance Storable PopplerColor where
      
 peekPopplerColor :: Ptr PopplerColor -> IO PopplerColor
 peekPopplerColor ptr = do
-    red	   <- #{peek PopplerColor, red} ptr
+    red    <- #{peek PopplerColor, red} ptr
     green  <- #{peek PopplerColor, green} ptr
     blue   <- #{peek PopplerColor, blue} ptr
     return $ PopplerColor red green blue
+

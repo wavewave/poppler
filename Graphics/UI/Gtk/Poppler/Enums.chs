@@ -30,7 +30,6 @@
 module Graphics.UI.Gtk.Poppler.Enums (
 -- * Enums
     Error(..),
-    Orientation(..),
     SelectionStyle(..),
     PageTransitionType(..),
     PageTransitionAlignment(..),
@@ -60,7 +59,6 @@ import System.Glib.UTFString
 {# context lib="poppler" prefix="poppler" #}
 
 {# enum PopplerError as Error {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
-{# enum PopplerOrientation as Orientation {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
 {# enum PopplerSelectionStyle as SelectionStyle {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
 {# enum PopplerPageTransitionType as PageTransitionType {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}
 {# enum PopplerPageTransitionAlignment as PageTransitionAlignment {underscoreToCase} with prefix = "Poppler" deriving (Eq, Ord, Bounded, Show, Typeable) #}

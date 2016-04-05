@@ -1,6 +1,7 @@
 #ifndef _TEMPLATE_HSC_GTK2HS_H_
 #define _TEMPLATE_HSC_GTK2HS_H_
 
+#include <stdio.h>
 #include <glib.h>
 
 #define hsc_gtk2hs_type(t)                        \
