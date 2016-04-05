@@ -18,7 +18,7 @@ import Distribution.Text
 
 import System.Environment
 import System.Process
-import System.Exit (ExitCode(..), exitWith)
+import System.Exit (ExitCode(..), exitWith, die)
 import System.FilePath
 import System.Directory
 import qualified Control.Exception as Exception
@@ -88,7 +88,7 @@ setupWrapper setupHsFile = do
       let cabalDep = Dependency (PackageName "Cabal")
                                 (orLaterVersion useCabalVersion)
       case PackageIndex.lookupDependency index cabalDep of
-        []   -> die $ "The package requires Cabal library version "
+        []   -> System.Exit.die $ "The package requires Cabal library version "
                    ++ display useCabalVersion
                    ++ " but no suitable version is installed."
         pkgs -> return $ bestVersion (map fst pkgs)
