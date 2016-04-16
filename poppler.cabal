@@ -1,5 +1,5 @@
 Name:           poppler
-Version:        0.14
+Version:        0.14.0
 License:        GPL-2
 License-file:   COPYING
 Copyright:      (c) 2001-2012, 2014 The Gtk2Hs Team
@@ -40,7 +40,7 @@ Source-Repository head
 
 flag gtk3
   description: compile with gtk3
-  default: False
+  default: True
 
 Library
         build-depends:  base >= 4 && < 5, array, containers, 
