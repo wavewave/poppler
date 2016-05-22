@@ -69,7 +69,8 @@ Library
           Graphics.UI.Gtk.Poppler.Structs
           Graphics.UI.Gtk.Poppler.Types
 
-        extensions:     ForeignFunctionInterface
+        default-language:   Haskell2010
+        default-extensions: ForeignFunctionInterface
 		
         include-dirs:   .
         x-c2hs-Header:  poppler.h
