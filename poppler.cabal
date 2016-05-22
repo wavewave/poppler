@@ -6,7 +6,7 @@ Copyright:      (c) 2001-2012, 2014 The Gtk2Hs Team
 Author:         Andy Stewart
 Maintainer:     Ian-Woo Kim <ianwookim@gmail.com>
 Build-Type:     Custom
-Cabal-Version:  >= 1.8
+Cabal-Version:  >= 1.24
 Stability:      stable
 homepage:       http://projects.haskell.org/gtk2hs
 bug-reports:    http://github.com/wavewave/poppler/issues
@@ -16,9 +16,7 @@ Description:    Poppler is a fork of the xpdf PDF viewer, to provide PDF renderi
 				And move to forward in a number of areas that don't fit within the goals of xpdf.
 Category:       Graphics
 Tested-With:    GHC == 7.10
-Extra-Source-Files: SetupWrapper.hs
-                    SetupMain.hs
-                    Gtk2HsSetup.hs
+Extra-Source-Files:
 		    hierarchy.list
 		    template-hsc-gtk2hs.h
 
@@ -41,6 +39,11 @@ Source-Repository head
 flag gtk3
   description: compile with gtk3
   default: False
+
+custom-setup
+  setup-depends: base >= 4.6,
+                 Cabal >= 1.24 && < 1.25,
+                 gtk2hs-buildtools >= 0.13.1.0 && < 0.14
 
 Library
         build-depends:  base >= 4 && < 5, array, containers, 
