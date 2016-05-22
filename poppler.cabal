@@ -1,5 +1,5 @@
 Name:           poppler
-Version:        0.13.2
+Version:        0.13.3
 License:        GPL-2
 License-file:   COPYING
 Copyright:      (c) 2001-2012, 2014 The Gtk2Hs Team
@@ -51,9 +51,9 @@ Library
                         glib >= 0.13 && < 0.14,
                         cairo >= 0.13 && < 0.14
         if flag(gtk3)
-          build-depends: gtk3 >= 0.13 && < 0.14
+          build-depends: gtk3 >= 0.14.3 && < 0.15
         else
-          build-depends: gtk >= 0.13 && < 0.14
+          build-depends: gtk >= 0.14.3 && < 0.15
         build-tools:    gtk2hsC2hs, gtk2hsHookGenerator, gtk2hsTypeGen
 						
         exposed-modules:
