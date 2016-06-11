@@ -2,7 +2,7 @@ Name:           poppler
 Version:        0.14.0
 License:        GPL-2
 License-file:   COPYING
-Copyright:      (c) 2001-2012, 2014 The Gtk2Hs Team
+Copyright:      (c) 2001-2012, 2014-2016 The Gtk2Hs Team
 Author:         Andy Stewart
 Maintainer:     Ian-Woo Kim <ianwookim@gmail.com>
 Build-Type:     Custom
@@ -52,6 +52,8 @@ Library
         else
           build-depends: gtk >= 0.13 && < 0.15
         build-tools:    gtk2hsC2hs, gtk2hsHookGenerator, gtk2hsTypeGen
+
+        cpp-options:     -U__BLOCKS__ -D__attribute__(A)=
 						
         exposed-modules:
           Graphics.UI.Gtk.Poppler.Action
