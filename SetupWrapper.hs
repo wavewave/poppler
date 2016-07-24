@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -- A wrapper script for Cabal Setup.hs scripts. Allows compiling the real Setup
 -- conditionally depending on the Cabal version.
 
@@ -8,7 +10,7 @@ import Distribution.Compiler
 import Distribution.Simple.Utils
 import Distribution.Simple.Program
 import Distribution.Simple.Compiler
-import Distribution.Simple.BuildPaths (exeExtension)
+import Distribution.Simple.BuildPaths as B (exeExtension)
 import Distribution.Simple.Configure (configCompilerEx)
 import Distribution.Simple.GHC (getInstalledPackages)
 import qualified Distribution.Simple.PackageIndex as PackageIndex
@@ -57,7 +59,7 @@ setupWrapper setupHsFile = do
   where
     setupDir         = "dist/setup-wrapper"
     setupVersionFile = setupDir </> "setup" <.> "version"
-    setupProgFile    = setupDir </> "setup" <.> exeExtension
+    setupProgFile    = setupDir </> "setup" <.> B.exeExtension
     setupMacroFile   = setupDir </> "wrapper-macros.h"
 
     useCabalVersion  = Version [1,8] []
@@ -83,8 +85,8 @@ setupWrapper setupHsFile = do
         _                             -> return Nothing
 
     installedCabalVersion comp conf = do
-      index <- getInstalledPackages verbosity usePackageDB conf
-
+      (compiler,_,_) <- configCompilerEx defaultCompilerFlavor Nothing Nothing conf verbosity
+      index <- getInstalledPackages verbosity compiler usePackageDB conf
       let cabalDep = Dependency (PackageName "Cabal")
                                 (orLaterVersion useCabalVersion)
       case PackageIndex.lookupDependency index cabalDep of

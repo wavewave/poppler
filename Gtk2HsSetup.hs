@@ -16,6 +16,7 @@ module Gtk2HsSetup (
   ) where
 
 import Distribution.Simple
+import Distribution.Simple.Configure     ( configCompilerEx )
 import Distribution.Simple.PreProcess
 import Distribution.InstalledPackageInfo ( importDirs,
                                            showInstalledPackageInfo,
@@ -36,6 +37,7 @@ import Distribution.Simple.LocalBuildInfo (LocalBuildInfo(withPackageDB, buildDi
 import Distribution.Simple.Compiler  ( Compiler(..) )
 import Distribution.Simple.Program (
   Program(..), ConfiguredProgram(..),
+  defaultProgramConfiguration,
   rawSystemProgramConf, rawSystemProgramStdoutConf, programName, programPath,
   c2hsProgram, pkgConfigProgram, gccProgram, requireProgram, ghcPkgProgram,
   simpleProgram, lookupProgram, rawSystemProgramStdout, ProgArg)
@@ -66,16 +68,11 @@ import Distribution.Simple.Compiler (compilerVersion)
 
 import Control.Applicative ((<$>))
 
-#if CABAL_VERSION_CHECK(1,17,0)
 import Distribution.Simple.Program.Find ( defaultProgramSearchPath )
 onDefaultSearchPath f a b = f a b defaultProgramSearchPath
 libraryConfig lbi = case [clbi | (LBI.CLibName, clbi, _) <- LBI.componentsConfigs lbi] of
   [clbi] -> Just clbi
   _ -> Nothing
-#else
-onDefaultSearchPath = id
-libraryConfig = LBI.libraryConfig
-#endif
 
 -- the name of the c2hs pre-compiled header file
 precompFile = "precompchs.bin"
@@ -167,11 +164,7 @@ register pkg@PackageDescription { library       = Just lib  } lbi regFlags
     let clbi = LBI.getComponentLocalBuildInfo lbi LBI.CLibName
 
     installedPkgInfoRaw <- generateRegistrationInfo
-#if CABAL_VERSION_CHECK(1,22,0)
                            verbosity pkg lib lbi clbi inplace False distPref packageDb
-#else
-                           verbosity pkg lib lbi clbi inplace distPref
-#endif
 
     dllsInScope <- getSearchPath >>= (filterM doesDirectoryExist) >>= getDlls
     let libs = fixLibs dllsInScope (extraLibraries installedPkgInfoRaw)
@@ -182,14 +175,9 @@ register pkg@PackageDescription { library       = Just lib  } lbi regFlags
     case () of
      _ | modeGenerateRegFile   -> writeRegistrationFile installedPkgInfo
        | modeGenerateRegScript -> die "Generate Reg Script not supported"
-       | otherwise             -> registerPackage verbosity
-                                    installedPkgInfo pkg lbi inplace
-#if CABAL_VERSION_CHECK(1,10,0)
-                                    packageDbs
-#else
-                                    packageDb
-#endif
-
+       | otherwise             -> do
+       (compiler,_,_) <- configCompilerEx defaultCompilerFlavor Nothing Nothing defaultProgramConfiguration verbosity
+       registerPackage verbosity compiler defaultProgramConfiguration inplace packageDbs installedPkgInfo
   where
     modeGenerateRegFile = isJust (flagToMaybe (regGenPkgConf regFlags))
     regFile             = fromMaybe (display (packageId pkg) <.> "conf")
