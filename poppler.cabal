@@ -81,3 +81,5 @@ Library
           pkgconfig-depends: poppler-glib >= 0.12.4, cairo >= 1.2.0, gdk-3.0, pango
         else
           pkgconfig-depends: poppler-glib >= 0.12.4, gobject-2.0, glib-2.0, cairo >= 1.2.0, gdk-2.0, gdk-pixbuf-2.0, pango
+        if os(darwin)
+          cpp-options: -U__BLOCKS__ -D__attribute__(A)= -D_Nullable= -D_Nonnull=
